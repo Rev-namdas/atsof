@@ -6,14 +6,10 @@ const userDetailsSchema = new mongoose.Schema({
 	attendance: [
 		{
 			month: String,
-			details: [
-				{
-					date: Number,
-					login_time: String,
-					logout_time: String,
-					late: { type: Number, default: 0 },
-				}
-			]
+			date: Number,
+			login_time: String,
+			logout_time: String,
+			late: { type: Number, default: 0 },
 		}
 	]
 }, {
