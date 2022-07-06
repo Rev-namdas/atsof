@@ -14,28 +14,28 @@ const UserDetails = require("../models/UserDetails");
 module.exports.user_registration = (req, res) => {
     const { user_name, password, role, dayoff } = req.body;
     const username = user_name.toUpperCase();
-    return res.send({ message: "Worked" })
-    // Users.findOne({ username }, async (err, user_exist) => {
-    //     if (err) throw err;
-    //     if (user_exist)
-    //         res.status(202).send({
-    //             message: "Username Already Exist!",
-    //             flag: "FAIL",
-    //         });
 
-    //     if (!user_exist) {
-    //         const newUser = new Users({
-    //             user_id: uuid(),
-    //             username: username,
-    //             password: md5(password) || md5("1234"),
-    //             role: role || process.env.USER,
-    //             dayoff: dayoff || 0,
-    //         });
+    Users.findOne({ username }, async (err, user_exist) => {
+        if (err) throw err;
+        if (user_exist)
+            res.status(202).send({
+                message: "Username Already Exist!",
+                flag: "FAIL",
+            });
 
-    //         await newUser.save();
-    //         res.status(200).send({ message: "User Created!", flag: "SUCCESS" });
-    //     }
-    // });
+        if (!user_exist) {
+            const newUser = new Users({
+                user_id: uuid(),
+                username: username,
+                password: md5(password) || md5("1234"),
+                role: role || process.env.USER,
+                dayoff: dayoff || 0,
+            });
+
+            await newUser.save();
+            res.status(200).send({ message: "User Created!", flag: "SUCCESS" });
+        }
+    });
 };
 
 module.exports.user_login = (req, res) => {
@@ -57,8 +57,16 @@ module.exports.user_login = (req, res) => {
             }
 
             if (user_exist.password === md5(password)) {
+                const today = new Date();
+                if (user_exist.dayoff === today.getDay() + 1) {
+                    return res.send({
+                        message: "Not allowed today",
+                        flag: "FAIL",
+                    });
+                }
+
                 const output = {
-                    id: user_exist.user_id,
+                    user_id: user_exist.user_id,
                     username: user_exist.username,
                     role: user_exist.role,
                     message: "Login successful",
@@ -78,8 +86,7 @@ module.exports.user_attendance = (req, res) => {
     if (
         errors.includes(user_id) ||
         errors.includes(month) ||
-        errors.includes(date) ||
-        errors.includes(login_time)
+        errors.includes(date)
     ) {
         return res.send({
             message: "user_id, month, date & login_time fields are required",
@@ -87,16 +94,16 @@ module.exports.user_attendance = (req, res) => {
         });
     }
 
-    const formData = {}
-    
-    formData.user_id = user_id
+    const formData = {};
+
+    formData.user_id = user_id;
     formData.attendance = {
         month: month,
         date: date,
         login_time: login_time,
         logout_time: logout_time || login_time,
-        late: late || 0
-    }
+        late: late || 0,
+    };
 
     UserDetails.findOne({ user_id: user_id }, async (err, user_exist) => {
         if (err) return res.send({ message: err.message, flag: "FAIL" });
@@ -105,9 +112,15 @@ module.exports.user_attendance = (req, res) => {
             const done = new UserDetails(formData).save();
 
             if (done) {
-                return res.send({ message: "Attendance created", flag: "SUCCESS" });
+                return res.send({
+                    message: `You are logged in on ${login_time}`,
+                    flag: "SUCCESS",
+                });
             } else {
-                return res.send({ message: "Something went wrong", flag: "FAIL" });
+                return res.send({
+                    message: "Something went wrong",
+                    flag: "FAIL",
+                });
             }
         }
 
@@ -120,29 +133,37 @@ module.exports.user_attendance = (req, res) => {
                 },
                 (err, date_exists) => {
                     if (err) {
-                        return res.send({ message: err.message, flag: 'FAIL' })
+                        return res.send({ message: err.message, flag: "FAIL" });
                     }
-                    
-                    if(date_exists){
-                        user_exist.attendance.map(each => {
-                            if(each.date === date){
-                                each.logout_time = logout_time
+
+                    if (date_exists) {
+                        user_exist.attendance.map((each) => {
+                            if (each.date === date) {
+                                each.logout_time = logout_time;
                             }
-                        })
+                        });
 
-                        const updated = user_exist.save()
-                        
-                        if(updated){
-                            return res.send({ message: "Attendance Updated", flag: 'SUCCESS' })
+                        const updated = user_exist.save();
+
+                        if (updated) {
+                            return res.send({
+                                message: `You have logged out on ${logout_time}`,
+                                flag: "SUCCESS",
+                            });
                         } else {
-                            return res.send({ message: "Something Wrong", flag: 'FAIL' })
+                            return res.send({
+                                message: "Something Wrong",
+                                flag: "FAIL",
+                            });
                         }
-
                     } else {
-                        user_exist.attendance.push(formData.attendance)
-                        user_exist.save()
+                        user_exist.attendance.push(formData.attendance);
+                        user_exist.save();
 
-                        return res.send({ message: "Attendance Added", flag: 'SUCCESS' })
+                        return res.send({
+                            message: "Attendance Added",
+                            flag: "SUCCESS",
+                        });
                     }
                 }
             );
@@ -157,13 +178,16 @@ module.exports.fetch_details = async (req, res) => {
 };
 
 module.exports.validate_permission = async (req, res, next) => {
-    const { client_roles } = req.body
+    const { client_roles } = req.body;
 
-    const result = client_roles.includes(parseInt(process.env.SUPER_ADMIN))
+    const permitted = client_roles.includes(parseInt(process.env.SUPER_ADMIN));
 
-    if(result){
-        next()
+    if (permitted) {
+        next();
     } else {
-        return res.send({ message: "You are not allowed for this operation", flag: "FAIL" })
+        return res.send({
+            message: "You are not allowed for this operation",
+            flag: "FAIL",
+        });
     }
 };

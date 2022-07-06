@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
 	password: { type: String, required: true, default: '1234' },
 	role: [{ type: Number, required: false, default: process.env.USER }],
 	dayoff: { type: Number, required: false, default: 0 },
-	activate: { type: Boolean, default: true }
+	active: { type: Boolean, default: true }
 }, {
 	collection: 'users'
 })

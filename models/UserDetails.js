@@ -5,7 +5,7 @@ const userDetailsSchema = new mongoose.Schema({
 	user_id: { type: String, required: true },
 	attendance: [
 		{
-			month: String,
+			month: Number,
 			date: Number,
 			login_time: String,
 			logout_time: String,
