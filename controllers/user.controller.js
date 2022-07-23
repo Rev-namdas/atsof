@@ -3,39 +3,49 @@ const { v4: uuid } = require("uuid");
 const md5 = require("md5");
 const Users = require("../models/Users");
 const UserDetails = require("../models/UserDetails");
+const UserLeave = require("../models/UserLeave");
 
 /**
  * user registration api
  * @param {object} req for getting request
  * @param {object} res for sending reponses
  *
- * @api_fields user_name, password, role, dayoff
+ * @api_fields user_name, password, role, dayoff, office_time
  */
 module.exports.user_registration = (req, res) => {
-    const { user_name, password, role, dayoff } = req.body;
+    const { user_name, password, role, dayoff, office_time } = req.body;
     const username = user_name.toUpperCase();
+    const user_id = uuid();
 
     Users.findOne({ username }, async (err, user_exist) => {
         if (err) throw err;
         if (user_exist)
-            res.status(202).send({
-                message: "Username Already Exist!",
+            return res.status(202).send({
+                message: "Username already exist!",
                 flag: "FAIL",
             });
 
         if (!user_exist) {
             const newUser = new Users({
-                user_id: uuid(),
+                user_id: user_id,
                 username: username,
                 password: md5(password) || md5("1234"),
                 role: role || process.env.USER,
                 dayoff: dayoff || 0,
+                office_time: office_time,
             });
 
             await newUser.save();
-            res.status(200).send({ message: "User Created!", flag: "SUCCESS" });
+            res.status(200).send({ message: "User created!", flag: "SUCCESS" });
         }
     });
+
+    // {
+    //     leave_id: { type: Number, unique: true },
+    //     leave_type: String,
+    //     leave_balance: Number,
+    //     leave_taken: Number
+    // }
 };
 
 module.exports.user_login = (req, res) => {
@@ -47,7 +57,7 @@ module.exports.user_login = (req, res) => {
         if (!user_exist)
             return res
                 .status(202)
-                .send({ message: "You are not registered !", flag: "FAIL" });
+                .send({ message: "You are not registered!", flag: "FAIL" });
 
         if (user_exist) {
             if (user_exist.password !== md5(password)) {
@@ -89,7 +99,7 @@ module.exports.user_attendance = (req, res) => {
         errors.includes(date)
     ) {
         return res.send({
-            message: "user_id, month, date & login_time fields are required",
+            message: "user_id, month, date fields are required",
             flag: "FAIL",
         });
     }
@@ -114,6 +124,7 @@ module.exports.user_attendance = (req, res) => {
             if (done) {
                 return res.send({
                     message: `You are logged in on ${login_time}`,
+                    login_date: date,
                     flag: "SUCCESS",
                 });
             } else {
@@ -136,18 +147,30 @@ module.exports.user_attendance = (req, res) => {
                         return res.send({ message: err.message, flag: "FAIL" });
                     }
 
+                    if (!date_exists) {
+                        user_exist.attendance.push(formData.attendance);
+                        user_exist.save();
+
+                        return res.send({
+                            message: `You have logged in on ${login_time}`,
+                            login_date: date,
+                            flag: "SUCCESS",
+                        });
+                    }
+
                     if (date_exists) {
-                        user_exist.attendance.map((each) => {
+                        date_exists.attendance.map((each) => {
                             if (each.date === date) {
-                                each.logout_time = logout_time;
+                                each.logout_time = login_time;
                             }
                         });
 
-                        const updated = user_exist.save();
+                        const updated = date_exists.save();
 
                         if (updated) {
                             return res.send({
-                                message: `You have logged out on ${logout_time}`,
+                                message: "Welcome back !",
+                                login_date: date,
                                 flag: "SUCCESS",
                             });
                         } else {
@@ -156,19 +179,76 @@ module.exports.user_attendance = (req, res) => {
                                 flag: "FAIL",
                             });
                         }
-                    } else {
-                        user_exist.attendance.push(formData.attendance);
-                        user_exist.save();
-
-                        return res.send({
-                            message: "Attendance Added",
-                            flag: "SUCCESS",
-                        });
                     }
                 }
             );
         }
     });
+};
+
+module.exports.user_logout = (req, res) => {
+    const { user_id, month, date, logout_time } = req.body;
+
+    const errors = ["", null, undefined];
+
+    if (
+        errors.includes(user_id) ||
+        errors.includes(month) ||
+        errors.includes(date) ||
+        errors.includes(logout_time)
+    ) {
+        return res.send({
+            message: "user_id, month, date fields are required",
+            flag: "FAIL",
+        });
+    }
+
+    UserDetails.findOne(
+        {
+            user_id: user_id,
+            "attendance.month": month,
+            "attendance.date": date,
+        },
+        (err, date_exists) => {
+            if (err) {
+                return res.send({ message: err.message, flag: "FAIL" });
+            }
+
+            if (date_exists) {
+                date_exists.attendance.map((each) => {
+                    if (each.date === date) {
+                        each.logout_time = logout_time;
+                    }
+                });
+
+                const updated = date_exists.save();
+
+                if (updated) {
+                    return res.send({
+                        message: `You have logged out on ${logout_time}`,
+                        flag: "SUCCESS",
+                    });
+                } else {
+                    return res.send({
+                        message: "Something Wrong",
+                        flag: "FAIL",
+                    });
+                }
+            } else {
+                return res.send({
+                    message: "Check user id, month, date field !",
+                    flag: "FAIL",
+                });
+            }
+        }
+    );
+};
+
+module.exports.fetch_attendance_by_user_id = async (req, res) => {
+    const { user_id } = req.params;
+    const result = await UserDetails.findOne({ user_id });
+
+    return res.send(result);
 };
 
 module.exports.fetch_details = async (req, res) => {
