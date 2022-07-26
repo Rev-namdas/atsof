@@ -13,12 +13,16 @@ const UserLeave = require("../models/UserLeave");
  * @api_fields user_name, password, role, dayoff, office_time
  */
 module.exports.user_registration = (req, res) => {
-    const { user_name, password, role, dayoff, office_time } = req.body;
+    const { user_name, password, role, dayoff, office_time, leaves } = req.body;
     const username = user_name.toUpperCase();
     const user_id = uuid();
 
     Users.findOne({ username }, async (err, user_exist) => {
-        if (err) throw err;
+        if (err)
+            return res.status(202).send({
+                message: err.message,
+                flag: "FAIL",
+            });
         if (user_exist)
             return res.status(202).send({
                 message: "Username already exist!",
@@ -35,17 +39,49 @@ module.exports.user_registration = (req, res) => {
                 office_time: office_time,
             });
 
-            await newUser.save();
-            res.status(200).send({ message: "User created!", flag: "SUCCESS" });
+            const user = await newUser.save();
+
+            const leaveInstance = new UserLeave({ user_id: user.user_id })
+            await leaveInstance.save()
+
+            let filter = {}
+            let updateDocs = {}
+
+            const checkIDs = leaves.map(each => each.leave_id)
+            filter["user_id"] = user.user_id
+            filter["leave.leave_id"] = { "$nin": checkIDs }
+
+            updateDocs["$push"] = {
+                "leave": {
+                    "$each": leaves
+                }
+            }
+
+            UserLeave.updateOne(filter, updateDocs, (err, updated) => {
+                if(err) return res.send({ message: err.message, flag: "FAIL" })
+
+                if(!updated){
+                    return res.send({ message: "DB not responding", flag: "FAIL" })
+                }
+                
+                if(updated){
+                    if(updated.matchedCount === 0){
+                        return res.send({ message: "User ID Not Found !", flag: "FAIL" })
+                    }
+                    
+                    if(updated.matchedCount > 0 && updated.modifiedCount === 0){
+                        return res.send({ message: "Leave ID Exists !", flag: "FAIL" })
+                    }
+                    
+                    if(updated.matchedCount > 0 && updated.modifiedCount > 0){
+                        return res.send({ message: "User Created !", flag: "SUCCESS" })
+                    }
+                    
+                    return res.send({ message: "Something went wrong !", log: updated, flag: "FAIL" })
+                }
+            })
         }
     });
-
-    // {
-    //     leave_id: { type: Number, unique: true },
-    //     leave_type: String,
-    //     leave_balance: Number,
-    //     leave_taken: Number
-    // }
 };
 
 module.exports.user_login = (req, res) => {
@@ -53,7 +89,11 @@ module.exports.user_login = (req, res) => {
     const username = user_name.toUpperCase();
 
     Users.findOne({ username }, async (err, user_exist) => {
-        if (err) throw err;
+        if (err)
+            return res
+                .status(202)
+                .send({ message: err.message, flag: "FAIL" });
+
         if (!user_exist)
             return res
                 .status(202)

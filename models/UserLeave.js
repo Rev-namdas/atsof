@@ -5,7 +5,7 @@ const userLeaveSchema = new mongoose.Schema({
 	user_id: { type: String, required: true },
 	leave: [
 		{
-			leave_id: { type: Number, unique: true },
+			leave_id: Number,
 			leave_type: String,
 			leave_balance: Number,
 			leave_taken: Number
