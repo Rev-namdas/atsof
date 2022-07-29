@@ -17,8 +17,14 @@ app.use(
     })
 );
 
-// user routes
-require('./routes/user.route')(app)
+// auth related routes
+require('./routes/auth/auth.routes')(app)
+// attendance related routes
+require('./routes/attendance/attendance.routes')(app)
+// user account related routes
+require('./routes/account/account.routes')(app)
+// leave related routes
+require('./routes/leave/leave.routes')(app)
 
 app.get("/", (req, res) => {
     return res.send({ message: "Welcome" });
