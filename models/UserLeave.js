@@ -20,6 +20,7 @@ const userLeaveSchema = new mongoose.Schema({
 	],
 	pending_leaves: [
 		{
+			name: String,
 			date: Number,
 			day: Number,
 			reason: String,
@@ -27,7 +28,8 @@ const userLeaveSchema = new mongoose.Schema({
 			pending: Boolean,
 			recommended: [String]
 		}
-	]
+	],
+	pending_status: Number
 }, {
 	collection: 'leaves'
 })
