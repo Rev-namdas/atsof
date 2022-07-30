@@ -15,7 +15,8 @@ const userLeaveSchema = new mongoose.Schema({
 		{
 			date: Number,
 			reason: String,
-			leave_id: Number
+			leave_id: Number,
+			recommended: [String]
 		}
 	],
 	pending_leaves: [
@@ -29,7 +30,7 @@ const userLeaveSchema = new mongoose.Schema({
 			recommended: [String]
 		}
 	],
-	pending_status: Number
+	pending_status: { type: Number, default: 0 }
 }, {
 	collection: 'leaves'
 })
