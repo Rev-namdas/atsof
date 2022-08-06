@@ -23,6 +23,9 @@ const userLeaveSchema = new mongoose.Schema({
 		{
 			name: String,
 			date: Number,
+			from_date: Number,
+			to_date: Number,
+			dates: [Number],
 			day: Number,
 			reason: String,
 			leave_id: Number,
