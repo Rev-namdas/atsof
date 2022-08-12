@@ -2,7 +2,7 @@ const UserLeave = require("../../models/UserLeave");
 const Users = require("../../models/Users");
 
 module.exports.leave_apply = (req, res) => {
-    const { user_id, name, day, date, reason, leave_id } = req.body;
+    const { user_id, name, from_date, to_date, dates, reason, leave_id } = req.body;
     const filter = {};
     const updatedDocs = {};
 
@@ -50,6 +50,56 @@ module.exports.leave_apply = (req, res) => {
         }
     });
 };
+
+// module.exports.leave_apply = (req, res) => {
+//     const { user_id, name, day, date, reason, leave_id } = req.body;
+//     const filter = {};
+//     const updatedDocs = {};
+
+//     filter["user_id"] = user_id;
+//     filter["pending_leaves.date"] = { $ne: date };
+//     filter["leave_dates.date"] = { $ne: date };
+
+//     updatedDocs["$push"] = {
+//         pending_leaves: {
+//             name,
+//             date,
+//             day,
+//             reason,
+//             leave_id,
+//             pending: true,
+//             recommended: [],
+//         },
+//     };
+//     updatedDocs["$inc"] = {
+//         pending_status: 1,
+//     };
+
+//     UserLeave.updateOne(filter, updatedDocs, (err, updated) => {
+//         if (err) return res.send({ message: err.message, flag: "FAIL" });
+
+//         if (!updated) {
+//             return res.send({
+//                 message: "Server Internal Error!",
+//                 flag: "FAIL",
+//             });
+//         }
+
+//         if (updated) {
+//             if (updated.matchedCount === 0) {
+//                 return res.send({
+//                     message: "You have already applied for this date",
+//                     flag: "FAIL",
+//                 });
+//             } else if (updated.matchedCount > 0 && updated.modifiedCount > 0) {
+//                 return res.send({
+//                     message: "Leave Apply Successful",
+//                     flag: "SUCCESS",
+//                 });
+//             }
+//         }
+//     });
+// };
 
 // module.exports.leave_apply = (req, res) => {
 //     const { user_id, day, date, reason, leave_id } = req.body;
