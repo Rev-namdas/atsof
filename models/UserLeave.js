@@ -3,36 +3,28 @@ const mongoose = require('mongoose')
 
 const userLeaveSchema = new mongoose.Schema({
 	user_id: { type: String, required: true },
+	username: String,
 	leave: [
 		{
 			leave_id: Number,
 			leave_type: String,
 			leave_balance: Number,
-			leave_taken: Number
+			leave_taken: { type: Number, default: 0 }
 		}
 	],
 	leave_dates: [
 		{
-			date: Number,
-			reason: String,
-			leave_id: Number,
-			recommended: [String]
-		}
-	],
-	pending_leaves: [
-		{
-			name: String,
-			date: Number,
 			from_date: Number,
 			to_date: Number,
-			dates: [{ day: Number, date: Number }],
-			taken_days: Number,
-			reason: String,
+			taken_dates: [{ day: Number, date: Number }],
+			leave_count: Number,
 			leave_id: Number,
-			pending: Boolean,
+			reason: String,
+			approved: Number,
 			recommended: [String]
 		}
 	],
+	applied_dates: [Number],
 	pending_status: { type: Number, default: 0 }
 }, {
 	collection: 'leaves'

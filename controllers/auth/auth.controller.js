@@ -44,6 +44,7 @@ module.exports.user_registration = (req, res) => {
 
             const leaveFormData = {
                 user_id: user.user_id,
+                username: user.username,
                 leaves: {
                     0: [],
                     1: [],
