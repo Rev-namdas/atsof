@@ -31,7 +31,7 @@ module.exports.leave_apply = (req, res) => {
     }
 
     newDocs["$inc"] = {
-        "pending_status": 1
+        "pending_status": leave_count
     }
 
     UserLeave.updateOne(filter, newDocs, (err, update) => {
@@ -75,7 +75,6 @@ module.exports.pending_leaves = async (req, res) => {
     filter["pending_status"] = {
         $gt: 0,
     };
-    filter["leave_dates.approved"] = 0
 
     let fields = {
         user_id: 1,
@@ -84,20 +83,49 @@ module.exports.pending_leaves = async (req, res) => {
         pending_status: 1,
     };
 
-    const userLeaves = await UserLeave.find(filter).select(fields);
-    return res.send({
-        leaves: userLeaves,
-        message: "Fetch Complete",
-        flag: "SUCCESS",
-    });
+    UserLeave.findOne(filter, fields, (err, doc_exist) => {
+        if(err) return res.send({
+            message: err.message,
+            flag: "FAIL"
+        })
+
+        if(!doc_exist){
+            return res.send({
+                leaves: [],
+                message: "Fetch Complete",
+                flag: "SUCCESS",
+            });
+        }
+
+        if(doc_exist){
+            let leave_info = doc_exist.leave_dates.filter(each => 
+                each.approved === 0)
+
+            const pending_leaves = leave_info.map(each => ({
+                ...each,
+                user_id: doc_exist.user_id,
+                name: doc_exist.username
+            }))
+
+            return res.send({
+                leaves: pending_leaves,
+                message: "Fetch Complete",
+                flag: "SUCCESS",
+            });
+        }
+    }).lean()
+
+    
 };
 
 module.exports.leave_approve = (req, res) => {
-    const { user_id, date } = req.body;
+    const { user_id, from_date, to_date, leave_count, taken_dates } = req.body;
     let filter = {};
 
     filter["user_id"] = user_id;
-    filter["pending_leaves.date"] = date;
+    filter["leave_dates.approved"] = 0
+    filter["leave_dates.from_date"] = from_date;
+    filter["leave_dates.to_date"] = to_date;
 
     UserLeave.findOne(filter, async (err, user_exist) => {
         if (err)
@@ -108,51 +136,63 @@ module.exports.leave_approve = (req, res) => {
 
         if (!user_exist) {
             return res.send({
-                message: "Not found in DB",
+                message: "Already Approved By You",
                 flag: "FAIL",
             });
         }
 
         if (user_exist) {
-            const approved_leave = user_exist.pending_leaves.find(
-                (each) => each.date === date
-            );
+            const approved_leave = user_exist.leave_dates.find(each => 
+                each.from_date === from_date &&
+                each.to_date === to_date
+            )
 
-            user_exist.leave_dates.push({
-                date: approved_leave.date,
-                reason: approved_leave.reason,
-                leave_id: approved_leave.leave_id,
-                recommended: approved_leave.recommended,
-            });
+            approved_leave.approved = 1
+            user_exist.pending_status = user_exist.pending_status - leave_count
+            
+            const taken_leave_type = user_exist.leave.find(each => 
+                each.leave_id === approved_leave.leave_id)
 
-            user_exist.leave.map((each) => {
-                if (each.leave_id === approved_leave.leave_id) {
-                    each.leave_balance = each.leave_balance - 1;
+            taken_leave_type.leave_balance = taken_leave_type.leave_balance - leave_count
+            taken_leave_type.leave_taken = taken_leave_type.leave_taken + leave_count
+
+            user_exist.save()
+
+            Users.findOne({ user_id }, (err, user_exist) => {
+                if(err) return res.send({
+                    message: err.message,
+                    flag: "FAIL"
+                })
+
+                if(!user_exist){
+                    return res.send({
+                        message: "User ID Not Found In DB",
+                        flag: "FAIL"
+                    })
                 }
-            });
 
-            user_exist.pending_leaves = user_exist.pending_leaves.filter(
-                (each) => each.date !== date
-            );
+                if(user_exist){
+                    taken_dates.map(each => {
+                        user_exist.leaves[each.day].push(each.date)
+                    })
 
-            user_exist.pending_status = user_exist.pending_status - 1
-
-            Users.findOne({ user_id }, async (err, user) => {
-                if(err) return res.send({ message: err.message, flag: 'FAIL' })
-
-                if(!user){
-                    return res.send({ message: "User ID Not Found", flag: "FAIL" })
-                }
-
-                if(user){
-                    user.leaves[approved_leave.day].push(date)
-                    await user.save()
+                    user_exist.save()
                 }
             })
-
-            await user_exist.save();
 
             return res.send({ message: "Leave approved", flag: "SUCCESS" });
         }
     });
 };
+
+module.exports.user_leave_status = async (req, res) => {
+    const { id } = req.params
+
+    const leave_details = await UserLeave.findOne({ user_id: id })
+    
+    return res.send({
+        message: "Fetch Complete",
+        leave_details: leave_details,
+        flag: "SUCCESS"
+    })
+}
