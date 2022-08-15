@@ -1,21 +1,24 @@
 const UserDetails = require("../../models/UserDetails");
+const Users = require("../../models/Users");
+const moment = require("moment")
 
-module.exports.save_attendance = (req, res) => {
-    const { user_id, month, date, login_time, logout_time, late } = req.body;
+module.exports.save_attendance = async (req, res) => {
+    const { user_id, month, date, login_time, logout_time } = req.body;
 
     const errors = ["", null, undefined];
 
     if (
         errors.includes(user_id) ||
         errors.includes(month) ||
-        errors.includes(date)
+        errors.includes(date) ||
+        errors.includes(login_time)
     ) {
         return res.send({
-            message: "user_id, month, date fields are required",
+            message: "user_id, month, date, login_time fields are required",
             flag: "FAIL",
         });
     }
-
+    
     const formData = {};
 
     formData.user_id = user_id;
@@ -24,8 +27,26 @@ module.exports.save_attendance = (req, res) => {
         date: date,
         login_time: login_time,
         logout_time: logout_time || login_time,
-        late: late || 0,
+        late: 0,
     };
+
+    const today = new Date()
+    const userOfficeTime = await Users.findOne({ user_id })
+        .then((user) => {
+            return user.office_time;
+        })
+        .catch(() => {
+            return 0;
+        });
+
+    const officeTime = moment(userOfficeTime[today.getDay()].starts, "hh:mm A")
+    const loginTime = moment(login_time, "hh:mm A")
+    const checkLoginTime = loginTime.diff(officeTime, 'minutes')
+    const graceTime = 5
+
+    if(checkLoginTime > graceTime){
+        formData.attendance.late = 1
+    }
 
     UserDetails.findOne({ user_id: user_id }, async (err, user_exist) => {
         if (err) return res.send({ message: err.message, flag: "FAIL" });
@@ -35,7 +56,7 @@ module.exports.save_attendance = (req, res) => {
 
             if (done) {
                 return res.send({
-                    message: `You are logged in on ${login_time}`,
+                    message: `You are logged in at ${login_time}`,
                     login_date: date,
                     flag: "SUCCESS",
                 });
@@ -96,6 +117,7 @@ module.exports.save_attendance = (req, res) => {
             );
         }
     });
+
 };
 
 module.exports.save_logout_time = (req, res) => {
@@ -168,3 +190,21 @@ module.exports.fetch_details = async (req, res) => {
 
     return res.send(result);
 };
+
+module.exports.fetch_user_lates = async (req, res) => {
+    const { user_id } = req.params;
+    const match_aggregate = {}
+    const unwind_aggregate = {}
+
+    unwind_aggregate["$unwind"] = "$attendance"
+    match_aggregate["$match"] = {
+        "$and": [
+            { user_id: user_id },
+            { "attendance.late": 1 }
+        ]
+    }
+    
+    const result = await UserDetails.aggregate([unwind_aggregate, match_aggregate])
+
+    return res.send(result)
+}
