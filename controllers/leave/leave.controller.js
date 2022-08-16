@@ -1,7 +1,7 @@
 const UserLeave = require("../../models/UserLeave");
 const Users = require("../../models/Users");
 
-module.exports.leave_apply = (req, res) => {
+module.exports.leave_apply = async (req, res) => {
     const { user_id, from_date, to_date, 
         taken_dates, leave_count, leave_id,
         reason } = req.body
@@ -34,39 +34,46 @@ module.exports.leave_apply = (req, res) => {
         "pending_status": leave_count
     }
 
-    UserLeave.updateOne(filter, newDocs, (err, update) => {
-        if(err) return res.send({ message: err.message, flag: "FAIL" })
+    const updated = await UserLeave.updateOne(filter, newDocs)
+        .then((data) => {
+            return data
+        })
+        .catch((err) => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
+        })
 
-        if(!update){
-            return res.send({ message: "Internal Error", flag: "FAIL" })
+    if(!updated){
+        return res.send({ message: "Internal Error", flag: "FAIL" })
+    }
+
+    if(updated){
+        if(updated.matchedCount === 0 && 
+            updated.modifiedCount === 0){
+            return res.send({
+                message: "You have already applied for this date",
+                flag: "FAIL"
+            })
         }
 
-        if(update){
-            if(update.matchedCount === 0 && 
-                update.modifiedCount === 0){
-                return res.send({
-                    message: "You have already applied for this date",
-                    flag: "FAIL"
-                })
-            }
-
-            if(update.matchedCount > 0 &&
-                update.modifiedCount === 0){
-                return res.send({
-                    message: "Something went wrong",
-                    flag: "FAIL"
-                })
-            }
-
-            if(update.matchedCount > 0 && 
-                update.modifiedCount > 0){
-                return res.send({
-                    message: "Leave Applied Successfully",
-                    flag: "SUCCESS"
-                })
-            }
+        if(updated.matchedCount > 0 &&
+            updated.modifiedCount === 0){
+            return res.send({
+                message: "Something went wrong",
+                flag: "FAIL"
+            })
         }
-    })
+
+        if(updated.matchedCount > 0 && 
+            updated.modifiedCount > 0){
+            return res.send({
+                message: "Leave Applied Successfully",
+                flag: "SUCCESS"
+            })
+        }
+    }
 }
 
 module.exports.pending_leaves = async (req, res) => {
@@ -83,42 +90,48 @@ module.exports.pending_leaves = async (req, res) => {
         pending_status: 1,
     };
 
-    UserLeave.findOne(filter, fields, (err, doc_exist) => {
-        if(err) return res.send({
-            message: err.message,
-            flag: "FAIL"
+    const docs_exist = await UserLeave.find(filter, fields).lean()
+        .then((data) => {
+            return data
+        })
+        .catch((err) => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
         })
 
-        if(!doc_exist){
-            return res.send({
-                leaves: [],
-                message: "Fetch Complete",
-                flag: "SUCCESS",
-            });
-        }
+    if(!docs_exist){
+        return res.send({
+            leaves: [],
+            message: "Fetch Complete",
+            flag: "SUCCESS",
+        });
+    }
 
-        if(doc_exist){
-            let leave_info = doc_exist.leave_dates.filter(each => 
-                each.approved === 0)
+    if(docs_exist){
+        let pending_leaves = [] 
+        
+        docs_exist.map(each_doc => {
+            each_doc.leave_dates
+                .filter(each => each.approved === 0)    
+                .map(each => {
+                    each.user_id = each_doc.user_id
+                    each.name = each_doc.username
 
-            const pending_leaves = leave_info.map(each => ({
-                ...each,
-                user_id: doc_exist.user_id,
-                name: doc_exist.username
-            }))
+                    pending_leaves.push(each)
+                })
+        })
 
-            return res.send({
-                leaves: pending_leaves,
-                message: "Fetch Complete",
-                flag: "SUCCESS",
-            });
-        }
-    }).lean()
-
-    
+        return res.send({
+            leaves: pending_leaves,
+            message: "Fetch Complete",
+            flag: "SUCCESS",
+        });
+    }
 };
 
-module.exports.leave_approve = (req, res) => {
+module.exports.leave_approve = async (req, res) => {
     const { user_id, from_date, to_date, leave_count, taken_dates } = req.body;
     let filter = {};
 
@@ -127,68 +140,81 @@ module.exports.leave_approve = (req, res) => {
     filter["leave_dates.from_date"] = from_date;
     filter["leave_dates.to_date"] = to_date;
 
-    UserLeave.findOne(filter, async (err, user_exist) => {
-        if (err)
+    const leave_exist = await UserLeave.findOne(filter)
+        .then((data) => {
+            return data
+        })
+        .catch((err) => {
             return res.send({
                 message: err.message,
-                flag: "FAIL",
-            });
-
-        if (!user_exist) {
-            return res.send({
-                message: "Already Approved By You",
-                flag: "FAIL",
-            });
-        }
-
-        if (user_exist) {
-            const approved_leave = user_exist.leave_dates.find(each => 
-                each.from_date === from_date &&
-                each.to_date === to_date
-            )
-
-            approved_leave.approved = 1
-            user_exist.pending_status = user_exist.pending_status - leave_count
-            
-            const taken_leave_type = user_exist.leave.find(each => 
-                each.leave_id === approved_leave.leave_id)
-
-            taken_leave_type.leave_balance = taken_leave_type.leave_balance - leave_count
-            taken_leave_type.leave_taken = taken_leave_type.leave_taken + leave_count
-
-            user_exist.save()
-
-            Users.findOne({ user_id }, (err, user_exist) => {
-                if(err) return res.send({
-                    message: err.message,
-                    flag: "FAIL"
-                })
-
-                if(!user_exist){
-                    return res.send({
-                        message: "User ID Not Found In DB",
-                        flag: "FAIL"
-                    })
-                }
-
-                if(user_exist){
-                    taken_dates.map(each => {
-                        user_exist.leaves[each.day].push(each.date)
-                    })
-
-                    user_exist.save()
-                }
+                flag: "FAIL"
             })
+        })
 
-            return res.send({ message: "Leave approved", flag: "SUCCESS" });
-        }
-    });
+    if (!leave_exist) {
+        return res.send({
+            message: "Already Approved By You",
+            flag: "FAIL",
+        });
+    }
+
+    if (leave_exist) {
+        const approved_leave = leave_exist.leave_dates.find(each => 
+            each.from_date === from_date &&
+            each.to_date === to_date
+        )
+
+        approved_leave.approved = 1
+        leave_exist.pending_status = leave_exist.pending_status - leave_count
+        
+        const taken_leave_type = leave_exist.leave.find(each => 
+            each.leave_id === approved_leave.leave_id)
+
+        taken_leave_type.leave_balance = taken_leave_type.leave_balance - leave_count
+        taken_leave_type.leave_taken = taken_leave_type.leave_taken + leave_count
+
+        leave_exist.save()
+    }
+
+    const user_exist = await Users.findOne({ user_id })
+        .then((data) => {
+            return data
+        })
+        .catch((err) => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
+        })
+
+    if(!user_exist){
+        return res.send({
+            message: "User ID Not Found In DB",
+            flag: "FAIL"
+        })
+    }
+
+    if(user_exist){
+        taken_dates.map(each => {
+            user_exist.leaves[each.day].push(each.date)
+        })
+
+        user_exist.save()
+    }
+
+    return res.send({ message: "Leave approved", flag: "SUCCESS" });
 };
 
 module.exports.user_leave_status = async (req, res) => {
     const { id } = req.params
 
     const leave_details = await UserLeave.findOne({ user_id: id })
+        .then((data) => {
+            return data
+        })
+        .catch(() => {
+            return {}
+        })
     
     return res.send({
         message: "Fetch Complete",

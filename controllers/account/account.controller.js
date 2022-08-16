@@ -1,39 +1,48 @@
 const Users = require("../../models/Users");
 
-module.exports.account_status_change = (req, res) => {
+module.exports.account_status_change = async (req, res) => {
     const { user_id, account_status } = req.body;
 
-    Users.updateOne(
-        { user_id },
-        { $set: { active: account_status } },
-        (err, updated) => {
-            if (err) {
-                return res.send({ message: err.message, flag: "FAIL" });
-            }
+    const filter = {}
+    const docUpdate = {}
 
-            if (updated.matchedCount === 0) {
-                return res.send({
-                    message: "User ID not exist!",
-                    flag: "FAIL",
-                });
-            } else if (
-                updated.matchedCount !== 0 &&
-                updated.modifiedCount === 0
-            ) {
-                return res.send({ message: "Doc Not Updated!", flag: "FAIL" });
-            } else if (
-                updated.matchedCount !== 0 &&
-                updated.modifiedCount !== 0
-            ) {
-                return res.send({
-                    message: `User ${
-                        account_status ? "Activated" : "Deactivated"
-                    } !`,
-                    flag: "SUCCESS",
-                });
-            }
-        }
-    );
+    filter["user_id"] = user_id
+    docUpdate["$set"] = {
+        active: account_status
+    }
+
+    const updated = await Users.updateOne(filter, docUpdate)
+        .then((data) => {
+            return data
+        })
+        .catch((err) => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
+        })
+
+    if (updated.matchedCount === 0) {
+        return res.send({
+            message: "User ID not exist!",
+            flag: "FAIL",
+        });
+    } else if (
+        updated.matchedCount !== 0 &&
+        updated.modifiedCount === 0
+    ) {
+        return res.send({ message: "Doc Not Updated!", flag: "FAIL" });
+    } else if (
+        updated.matchedCount !== 0 &&
+        updated.modifiedCount !== 0
+    ) {
+        return res.send({
+            message: `User ${
+                account_status ? "Activated" : "Deactivated"
+            } !`,
+            flag: "SUCCESS",
+        });
+    }
 };
 
 module.exports.fetch_users = async (req, res) => {
@@ -44,7 +53,14 @@ module.exports.fetch_users = async (req, res) => {
         role: 1,
         active: 1,
     };
-    const result = await Users.find().select(fields);
+    
+    const result = await Users.find().select(fields)
+        .then((data) => {
+            return data
+        })
+        .catch(() => {
+            return []
+        })
 
     return res.send(result);
 };

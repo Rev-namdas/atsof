@@ -48,79 +48,88 @@ module.exports.save_attendance = async (req, res) => {
         formData.attendance.late = 1
     }
 
-    UserDetails.findOne({ user_id: user_id }, async (err, user_exist) => {
-        if (err) return res.send({ message: err.message, flag: "FAIL" });
+    const user_exist = await UserDetails.findOne({ user_id })
+        .then((data) => {
+            return data
+        })
+        .catch((err) => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
+        })
 
-        if (!user_exist) {
-            const done = new UserDetails(formData).save();
+    if (!user_exist) {
+        const done = new UserDetails(formData).save();
 
-            if (done) {
+        if (done) {
+            return res.send({
+                message: `You are logged in at ${login_time}`,
+                login_date: date,
+                flag: "SUCCESS",
+            });
+        } else {
+            return res.send({
+                message: "Something went wrong",
+                flag: "FAIL",
+            });
+        }
+    }
+
+    if (user_exist) {
+        const filter = {}
+        filter["user_ud"] = user_id
+        filter["attendance.month"] = month
+        filter["attendance.date"] = date
+
+        const date_exist = await UserDetails.findOne(filter)
+            .then((data) => {
+                return data
+            })
+            .catch((err) => {
                 return res.send({
-                    message: `You are logged in at ${login_time}`,
+                    message: err.message,
+                    flag: "FAIL"
+                })
+            })
+
+        if (!date_exist) {
+            user_exist.attendance.push(formData.attendance);
+            user_exist.save();
+
+            return res.send({
+                message: `You have logged in at ${login_time}`,
+                login_date: date,
+                flag: "SUCCESS",
+            });
+        }
+
+        if (date_exist) {
+            date_exist.attendance.map((each) => {
+                if (each.date === date) {
+                    each.logout_time = login_time;
+                }
+            });
+
+            const updated = date_exist.save();
+
+            if (updated) {
+                return res.send({
+                    message: "Welcome back !",
                     login_date: date,
                     flag: "SUCCESS",
                 });
             } else {
                 return res.send({
-                    message: "Something went wrong",
+                    message: "Something Wrong",
                     flag: "FAIL",
                 });
             }
         }
-
-        if (user_exist) {
-            UserDetails.findOne(
-                {
-                    user_id: user_id,
-                    "attendance.month": month,
-                    "attendance.date": date,
-                },
-                (err, date_exists) => {
-                    if (err) {
-                        return res.send({ message: err.message, flag: "FAIL" });
-                    }
-
-                    if (!date_exists) {
-                        user_exist.attendance.push(formData.attendance);
-                        user_exist.save();
-
-                        return res.send({
-                            message: `You have logged in on ${login_time}`,
-                            login_date: date,
-                            flag: "SUCCESS",
-                        });
-                    }
-
-                    if (date_exists) {
-                        date_exists.attendance.map((each) => {
-                            if (each.date === date) {
-                                each.logout_time = login_time;
-                            }
-                        });
-
-                        const updated = date_exists.save();
-
-                        if (updated) {
-                            return res.send({
-                                message: "Welcome back !",
-                                login_date: date,
-                                flag: "SUCCESS",
-                            });
-                        } else {
-                            return res.send({
-                                message: "Something Wrong",
-                                flag: "FAIL",
-                            });
-                        }
-                    }
-                }
-            );
-        }
-    });
-
+    }
 };
 
-module.exports.save_logout_time = (req, res) => {
+module.exports.save_logout_time = async (req, res) => {
     const { user_id, month, date, logout_time } = req.body;
 
     const errors = ["", null, undefined];
@@ -137,56 +146,72 @@ module.exports.save_logout_time = (req, res) => {
         });
     }
 
-    UserDetails.findOne(
-        {
-            user_id: user_id,
-            "attendance.month": month,
-            "attendance.date": date,
-        },
-        (err, date_exists) => {
-            if (err) {
-                return res.send({ message: err.message, flag: "FAIL" });
+    const filter = {}
+    filter["user_id"] = user_id
+    filter["attendance.month"] = month
+    filter["attendance.date"] = date
+
+    const date_exist = await UserDetails.findOne(filter)
+        .then((data) => {
+            return data
+        })
+        .catch((err) => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
+        })
+
+    if (date_exist) {
+        date_exist.attendance.map((each) => {
+            if (each.date === date) {
+                each.logout_time = logout_time;
             }
+        });
 
-            if (date_exists) {
-                date_exists.attendance.map((each) => {
-                    if (each.date === date) {
-                        each.logout_time = logout_time;
-                    }
-                });
+        const updated = date_exist.save();
 
-                const updated = date_exists.save();
-
-                if (updated) {
-                    return res.send({
-                        message: `You have logged out on ${logout_time}`,
-                        flag: "SUCCESS",
-                    });
-                } else {
-                    return res.send({
-                        message: "Something Wrong",
-                        flag: "FAIL",
-                    });
-                }
-            } else {
-                return res.send({
-                    message: "Check user id, month, date field !",
-                    flag: "FAIL",
-                });
-            }
+        if (updated) {
+            return res.send({
+                message: `You have logged out at ${logout_time}`,
+                flag: "SUCCESS",
+            });
+        } else {
+            return res.send({
+                message: "Something Wrong",
+                flag: "FAIL",
+            });
         }
-    );
+    } else {
+        return res.send({
+            message: "Check user id, month, date field !",
+            flag: "FAIL",
+        });
+    }
 };
 
 module.exports.fetch_attendance_by_user_id = async (req, res) => {
     const { user_id } = req.params;
-    const result = await UserDetails.findOne({ user_id });
+
+    const result = await UserDetails.findOne({ user_id })
+        .then((data) => {
+            return data
+        })
+        .catch(() => {
+            return []
+        })
 
     return res.send(result);
 };
 
 module.exports.fetch_details = async (req, res) => {
-    const result = await UserDetails.find();
+    const result = await UserDetails.find()
+        .then((data) => {
+            return data
+        })
+        .catch(() => {
+            return []
+        })
 
     return res.send(result);
 };
@@ -204,7 +229,14 @@ module.exports.fetch_user_lates = async (req, res) => {
         ]
     }
     
-    const result = await UserDetails.aggregate([unwind_aggregate, match_aggregate])
+    const result = await UserDetails
+        .aggregate([unwind_aggregate, match_aggregate])
+        .then((data) => {
+            return data
+        })
+        .catch(() => {
+            return []
+        })
 
     return res.send(result)
 }
