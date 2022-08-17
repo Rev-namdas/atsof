@@ -205,6 +205,53 @@ module.exports.leave_approve = async (req, res) => {
     return res.send({ message: "Leave approved", flag: "SUCCESS" });
 };
 
+module.exports.leave_decline = async (req, res) => {
+    const { user_id, from_date, to_date } = req.body
+    const filter = {}
+    const updateDoc = {}
+
+    filter["user_id"] = user_id
+    filter["leave_dates.approved"] = 0
+    filter["leave_dates.from_date"] = from_date
+    filter["leave_dates.to_date"] = to_date
+
+    updateDoc["$set"] = {
+        "leave_dates.$.approved": -1
+    }
+
+    const updated = await UserLeave.updateOne(filter, updateDoc)
+        .then((update) => {
+            return update
+        })
+        .catch((err) => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
+        })
+    
+    if(updated.matchedCount === 0){
+        return res.send({
+            message: "Leave Not Found",
+            flag: "FAIL"
+        })
+    }
+
+    if(updated.matchedCount === 1 && updated.modifiedCount === 0){
+        return res.send({
+            message: "Something went wrong",
+            flag: "FAIL"
+        })
+    }
+
+    if(updated.matchedCount !== 0 && updated.modifiedCount !== 0){
+        return res.send({
+            message: "Leave Declined",
+            flag: "SUCCESS"
+        })
+    }
+}
+
 module.exports.user_leave_status = async (req, res) => {
     const { id } = req.params
 
