@@ -253,9 +253,9 @@ module.exports.leave_decline = async (req, res) => {
 }
 
 module.exports.user_leave_status = async (req, res) => {
-    const { id } = req.params
+    const { user_id } = req.body
 
-    const leave_details = await UserLeave.findOne({ user_id: id })
+    const leave_details = await UserLeave.findOne({ user_id })
         .then((data) => {
             return data
         })

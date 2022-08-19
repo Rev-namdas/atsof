@@ -1,14 +1,15 @@
 const { leave_apply, pending_leaves, leave_approve, user_leave_status, leave_decline } = require('../../controllers/leave/leave.controller')
-const { validate_permission } = require('../../helpers/validate_permission')
+const { check_permission } = require('../../helpers/check_permission')
+const { get_id } = require('../../helpers/get_id')
 
 const router = require('express').Router()
 
 module.exports = (app) => {
 	router.post('/apply', leave_apply)
-	router.post('/list/all', [validate_permission], pending_leaves)
-	router.post('/approve', [validate_permission], leave_approve)
-	router.post('/decline', [validate_permission], leave_decline)
-	router.get('/status/:id', user_leave_status)
+	router.get('/list/all', [check_permission], pending_leaves)
+	router.patch('/approve', [check_permission], leave_approve)
+	router.patch('/decline', [check_permission], leave_decline)
+	router.get('/status', [get_id], user_leave_status)
 	
 	app.use('/api/v1/user/leave', router)
 	

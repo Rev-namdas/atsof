@@ -191,7 +191,7 @@ module.exports.save_logout_time = async (req, res) => {
 };
 
 module.exports.fetch_attendance_by_user_id = async (req, res) => {
-    const { user_id } = req.params;
+    const { user_id } = req.body;
 
     const result = await UserDetails.findOne({ user_id })
         .then((data) => {
@@ -217,7 +217,7 @@ module.exports.fetch_details = async (req, res) => {
 };
 
 module.exports.fetch_user_lates = async (req, res) => {
-    const { user_id } = req.params;
+    const { user_id } = req.body;
     const match_aggregate = {}
     const unwind_aggregate = {}
 

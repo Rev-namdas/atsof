@@ -189,7 +189,12 @@ module.exports.user_login = async (req, res) => {
                 });
             }
 
+            const arr = user_exist.user_id.split("-")
+            arr[0] = user_exist.role[0] + arr[0]
+            const auth = arr.join("-")
+
             const output = {
+                auth: auth,
                 user_id: user_exist.user_id,
                 username: user_exist.username,
                 role: user_exist.role,
