@@ -78,7 +78,7 @@ module.exports.save_attendance = async (req, res) => {
 
     if (user_exist) {
         const filter = {}
-        filter["user_ud"] = user_id
+        filter["user_id"] = user_id
         filter["attendance.month"] = month
         filter["attendance.date"] = date
 

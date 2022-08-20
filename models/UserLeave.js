@@ -21,7 +21,8 @@ const userLeaveSchema = new mongoose.Schema({
 			leave_id: Number,
 			reason: String,
 			approved: Number, // 0 = pending, 1 = approved, -1 = declined  
-			recommended: [String]
+			recommended: [String],
+			declined: [String]
 		}
 	],
 	applied_dates: [Number],
