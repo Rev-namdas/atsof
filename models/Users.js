@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema({
 	password: { type: String, required: true, default: '1234' },
 	role: [{ type: Number, required: false, default: process.env.USER }],
 	dayoff: [{ type: Number, required: false }],
+	department: { id: Number, name: String },
+	dept_access: [Number],
 	active: { type: Boolean, default: true },
 	office_time: {
 		0:	{ starts: String, ends: String },

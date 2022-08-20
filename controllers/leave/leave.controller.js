@@ -1,3 +1,4 @@
+const { validateApiKey } = require("../../helpers/validateApiKey");
 const UserLeave = require("../../models/UserLeave");
 const Users = require("../../models/Users");
 
@@ -12,17 +13,17 @@ module.exports.leave_apply = async (req, res) => {
         reason,
     } = req.body;
 
-    const errors = ["", null, undefined];
+    const isValid = validateApiKey({
+        user_id,
+        from_date,
+        to_date,
+        taken_dates,
+        leave_count,
+        leave_id,
+        reason,
+    })
 
-    if (
-        errors.includes(user_id) ||
-        errors.includes(from_date) ||
-        errors.includes(to_date) ||
-        errors.includes(taken_dates) ||
-        errors.includes(leave_count) ||
-        errors.includes(leave_id) ||
-        errors.includes(reason)
-    ) {
+    if (!isValid) {
         return res.send({
             message: "Invalid API Key !",
             flag: "FAIL"
@@ -155,15 +156,9 @@ module.exports.pending_leaves = async (req, res) => {
 module.exports.leave_approve = async (req, res) => {
     const { user_id, from_date, to_date, leave_count, taken_dates } = req.body;
 
-    const errors = [null, undefined, ""]
+    const isValid = validateApiKey({ user_id, from_date, to_date, leave_count, taken_dates })
 
-    if(
-        errors.includes(user_id) ||
-        errors.includes(from_date) ||
-        errors.includes(to_date) ||
-        errors.includes(leave_count) ||
-        errors.includes(taken_dates)
-    ){
+    if(!isValid){
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"
@@ -246,13 +241,9 @@ module.exports.leave_approve = async (req, res) => {
 module.exports.leave_decline = async (req, res) => {
     const { user_id, from_date, to_date } = req.body;
 
-    const errors = [null, undefined, ""]
+    const isValid = validateApiKey({ user_id, from_date, to_date })
 
-    if(
-        errors.includes(user_id) ||
-        errors.includes(from_date) ||
-        errors.includes(to_date)
-    ){
+    if(!isValid){
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"
@@ -307,15 +298,9 @@ module.exports.leave_decline = async (req, res) => {
 module.exports.leave_recommend = async (req, res) => {
     const { decision, user_id, employee_id, from_date, to_date } = req.body;
 
-    const errors = [null, undefined, ""]
+    const isValid = validateApiKey({ decision, user_id, employee_id, from_date, to_date })
 
-    if(
-        errors.includes(decision) ||
-        errors.includes(user_id) ||
-        errors.includes(employee_id) ||
-        errors.includes(from_date) ||
-        errors.includes(to_date)
-    ){
+    if(!isValid){
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"
@@ -405,9 +390,9 @@ module.exports.leave_recommend = async (req, res) => {
 module.exports.user_leave_status = async (req, res) => {
     const { user_id } = req.body;
 
-    const errors = [null, undefined, ""]
+    const isValid = validateApiKey({ user_id })
 
-    if(errors.includes(user_id)){
+    if(!isValid){
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"

@@ -1,7 +1,17 @@
+const { validateApiKey } = require("../../helpers/validateApiKey");
 const Users = require("../../models/Users");
 
 module.exports.account_status_change = async (req, res) => {
     const { user_id, account_status } = req.body;
+
+    const isValid = validateApiKey({ user_id, account_status })
+
+    if(!isValid){
+        return res.send({
+            message: "Invalid API Key",
+            flag: "FAIL"
+        })
+    }
 
     const filter = {}
     const docUpdate = {}

@@ -25,6 +25,9 @@ require('./routes/attendance/attendance.routes')(app)
 require('./routes/account/account.routes')(app)
 // leave related routes
 require('./routes/leave/leave.routes')(app)
+// department related routes
+require('./routes/settings-info/department/department.routes')(app)
+
 
 app.get("/", (req, res) => {
     return res.send({ message: "Welcome" });

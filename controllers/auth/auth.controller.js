@@ -4,6 +4,7 @@ const md5 = require("md5");
 const Users = require("../../models/Users");
 const UserLeave = require("../../models/UserLeave");
 const { date_to_unix } = require("../../helpers/date_to_unix");
+const { validateApiKey } = require("../../helpers/validateApiKey");
 
 
 /**
@@ -15,6 +16,16 @@ const { date_to_unix } = require("../../helpers/date_to_unix");
  */
 module.exports.user_registration = async (req, res) => {
     const { user_name, password, role, dayoff, office_time, leaves } = req.body;
+
+    const isValid = validateApiKey({ user_name, password, role, dayoff, office_time, leaves })
+
+    if(!isValid){
+        return res.send({
+            message: "Invalid API Key",
+            flag: "FAIL"
+        })
+    }
+
     const username = user_name.trim().toUpperCase();
     const user_id = uuid();
 
@@ -134,6 +145,16 @@ module.exports.user_registration = async (req, res) => {
 
 module.exports.user_login = async (req, res) => {
     const { user_name, password } = req.body;
+
+    const isValid = validateApiKey({ user_name, password })
+
+    if(!isValid){
+        return res.send({
+            message: "Invalid API Key",
+            flag: "FAIL"
+        })
+    }
+
     const username = user_name.toUpperCase();
 
     const user_exist = await Users.findOne({ username })

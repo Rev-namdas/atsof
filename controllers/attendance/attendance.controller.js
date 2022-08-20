@@ -1,20 +1,16 @@
 const UserDetails = require("../../models/UserDetails");
 const Users = require("../../models/Users");
-const moment = require("moment")
+const moment = require("moment");
+const { validateApiKey } = require("../../helpers/validateApiKey");
 
 module.exports.save_attendance = async (req, res) => {
     const { user_id, month, date, login_time, logout_time } = req.body;
 
-    const errors = ["", null, undefined];
+    const isValid = validateApiKey({ user_id, month, date, login_time, logout_time })
 
-    if (
-        errors.includes(user_id) ||
-        errors.includes(month) ||
-        errors.includes(date) ||
-        errors.includes(login_time)
-    ) {
+    if (!isValid) {
         return res.send({
-            message: "user_id, month, date, login_time fields are required",
+            message: "Invalid API Key",
             flag: "FAIL",
         });
     }
@@ -132,16 +128,11 @@ module.exports.save_attendance = async (req, res) => {
 module.exports.save_logout_time = async (req, res) => {
     const { user_id, month, date, logout_time } = req.body;
 
-    const errors = ["", null, undefined];
+    const isValid = validateApiKey({ user_id, month, date, logout_time })
 
-    if (
-        errors.includes(user_id) ||
-        errors.includes(month) ||
-        errors.includes(date) ||
-        errors.includes(logout_time)
-    ) {
+    if (!isValid) {
         return res.send({
-            message: "user_id, month, date fields are required",
+            message: "Invalid API Key",
             flag: "FAIL",
         });
     }
@@ -193,6 +184,15 @@ module.exports.save_logout_time = async (req, res) => {
 module.exports.fetch_attendance_by_user_id = async (req, res) => {
     const { user_id } = req.body;
 
+    const isValid = validateApiKey({ user_id })
+
+    if(!isValid) {
+        return res.send({
+            message: "Invalid API Key",
+            flag: "FAIL"
+        })
+    }
+
     const result = await UserDetails.findOne({ user_id })
         .then((data) => {
             return data
@@ -218,6 +218,16 @@ module.exports.fetch_details = async (req, res) => {
 
 module.exports.fetch_user_lates = async (req, res) => {
     const { user_id } = req.body;
+
+    const isValid = validateApiKey({ user_id })
+
+    if(!isValid){
+        return res.send({
+            message: "Invalid API Key",
+            flag: "FAIL"
+        })
+    }
+
     const match_aggregate = {}
     const unwind_aggregate = {}
 
