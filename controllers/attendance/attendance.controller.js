@@ -4,9 +4,9 @@ const moment = require("moment");
 const { validateApiKey } = require("../../helpers/validateApiKey");
 
 module.exports.save_attendance = async (req, res) => {
-    const { user_id, month, date, login_time, logout_time } = req.body;
+    const { user_id, department, month, date, login_time, logout_time } = req.body;
 
-    const isValid = validateApiKey({ user_id, month, date, login_time, logout_time })
+    const isValid = validateApiKey({ user_id, department, month, date, login_time })
 
     if (!isValid) {
         return res.send({
@@ -18,6 +18,7 @@ module.exports.save_attendance = async (req, res) => {
     const formData = {};
 
     formData.user_id = user_id;
+    formData.department = department;
     formData.attendance = {
         month: month,
         date: date,
@@ -249,4 +250,46 @@ module.exports.fetch_user_lates = async (req, res) => {
         })
 
     return res.send(result)
+}
+
+module.exports.fetch_attendance_by_dept = async (req, res) => {
+    const { dept_ids } = req.body
+
+    const isValid = validateApiKey({ dept_ids })
+
+    if(!isValid || !Array.isArray(dept_ids)){
+        return res.send({
+            message: "Invalid API Key",
+            flag: "FAIL"
+        })
+    }
+
+    const filter = {}
+    filter["department.id"] = {
+        $in: dept_ids
+    }
+
+    const attendances = await UserDetails.find({ "department.id": 3 })
+        .then(res => {
+            return res
+        })
+        .catch(err => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
+        })
+
+    if(!attendances){
+        return res.send({
+            message: "Something went wrong",
+            flag: "FAIL"
+        })
+    }
+
+    return res.send({
+        attendances: attendances,
+        message: "Fetched Successfully",
+        flag: "SUCCESS"
+    })
 }

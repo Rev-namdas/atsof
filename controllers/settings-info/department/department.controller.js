@@ -48,7 +48,7 @@ module.exports.create_department = async (req, res) => {
 
 module.exports.get_departments = async (req, res) => {
 	try {
-		const depts = await Departments.find()
+		const depts = await Departments.find().lean()
 
 		return res.send({
 			departments: depts,

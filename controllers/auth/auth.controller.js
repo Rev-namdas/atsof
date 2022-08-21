@@ -219,6 +219,8 @@ module.exports.user_login = async (req, res) => {
                 user_id: user_exist.user_id,
                 username: user_exist.username,
                 role: user_exist.role,
+                department: user_exist.department,
+                dept_access: user_exist.dept_access,
                 message: "Login successful",
                 flag: "SUCCESS",
             };
