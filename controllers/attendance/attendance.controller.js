@@ -4,9 +4,11 @@ const moment = require("moment");
 const { validateApiKey } = require("../../helpers/validateApiKey");
 
 module.exports.save_attendance = async (req, res) => {
-    const { user_id, department, month, date, login_time, logout_time } = req.body;
+    const { user_id, username, department_id, month, date, 
+        login_time, logout_time } = req.body;
 
-    const isValid = validateApiKey({ user_id, department, month, date, login_time })
+    const isValid = validateApiKey({ user_id, username, department_id, 
+        month, date, login_time })
 
     if (!isValid) {
         return res.send({
@@ -18,7 +20,8 @@ module.exports.save_attendance = async (req, res) => {
     const formData = {};
 
     formData.user_id = user_id;
-    formData.department = department;
+    formData.username = username;
+    formData.department_id = department_id;
     formData.attendance = {
         month: month,
         date: date,
@@ -183,18 +186,9 @@ module.exports.save_logout_time = async (req, res) => {
 };
 
 module.exports.fetch_attendance_by_user_id = async (req, res) => {
-    const { user_id } = req.body;
+    const { user } = req.body;
 
-    const isValid = validateApiKey({ user_id })
-
-    if(!isValid) {
-        return res.send({
-            message: "Invalid API Key",
-            flag: "FAIL"
-        })
-    }
-
-    const result = await UserDetails.findOne({ user_id })
+    const result = await UserDetails.findOne({ user_id: user.user_id })
         .then((data) => {
             return data
         })
@@ -269,7 +263,19 @@ module.exports.fetch_attendance_by_dept = async (req, res) => {
         $in: dept_ids
     }
 
-    const attendances = await UserDetails.find({ "department.id": 3 })
+    const attendances = await UserDetails
+        .aggregate([
+            {
+                $unwind: "$attendance"
+            },
+            {
+                $match: {
+                    "department.id": {
+                        $in: dept_ids
+                    }
+                }
+            }
+        ])
         .then(res => {
             return res
         })

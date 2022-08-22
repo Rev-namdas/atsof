@@ -74,3 +74,55 @@ module.exports.fetch_users = async (req, res) => {
 
     return res.send(result);
 };
+
+module.exports.fetch_users_by_id = async (req, res) => {
+    const { ids } = req.body
+    
+    const filter = {}
+    filter["user_id"] = {
+        $in: ids
+    }
+    
+    const fields = {
+        user_id: 1,
+        username: 1,
+        role: 1,
+        active: 1,
+        department: 1
+    };
+    
+    const result = await Users.find(filter).select(fields)
+        .then((data) => {
+            return data
+        })
+        .catch(() => {
+            return []
+        })
+
+    return res.send(result);
+};
+
+module.exports.fetch_user_by_auth = async (req, res) => {
+    const { user } = req.body
+    
+    const filter = {}
+    filter["auth"] = user.auth
+    
+    const fields = {
+        user_id: 1,
+        username: 1,
+        role: 1,
+        active: 1,
+        department: 1
+    };
+    
+    const result = await Users.find(filter).select(fields)
+        .then((data) => {
+            return data
+        })
+        .catch(() => {
+            return []
+        })
+
+    return res.send(result);
+};

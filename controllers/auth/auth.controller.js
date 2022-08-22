@@ -5,6 +5,7 @@ const Users = require("../../models/Users");
 const UserLeave = require("../../models/UserLeave");
 const { date_to_unix } = require("../../helpers/date_to_unix");
 const { validateApiKey } = require("../../helpers/validateApiKey");
+const UserDetails = require("../../models/UserDetails");
 
 
 /**
@@ -15,9 +16,12 @@ const { validateApiKey } = require("../../helpers/validateApiKey");
  * @api_fields user_name, password, role, dayoff, office_time
  */
 module.exports.user_registration = async (req, res) => {
-    const { user_name, password, role, dayoff, office_time, leaves } = req.body;
+    const { user_name, password, role, dayoff, office_time,
+        leaves, department_id, dept_access } = req.body;
 
-    const isValid = validateApiKey({ user_name, password, role, dayoff, office_time, leaves })
+    const isValid = validateApiKey({ user_name, password, 
+        role, dayoff, office_time, 
+        leaves, department_id, dept_access })
 
     if(!isValid){
         return res.send({
@@ -51,12 +55,15 @@ module.exports.user_registration = async (req, res) => {
 
     if(!user_exist){
         const newUser = new Users({
+            auth: user_id,
             user_id: user_id,
             username: username,
             password: md5(password) || md5("1234"),
             role: role || process.env.USER,
             dayoff: dayoff || 0,
             office_time: office_time,
+            department_id: department_id,
+            dept_access: dept_access
         });
 
         user = await newUser.save();
@@ -65,6 +72,7 @@ module.exports.user_registration = async (req, res) => {
     const leaveFormData = {
         user_id: user.user_id,
         username: user.username,
+        department_id: user.department_id,
         leaves: {
             0: [],
             1: [],
@@ -92,6 +100,7 @@ module.exports.user_registration = async (req, res) => {
         },
     };
 
+    let userLeaveInitiazed = false
     const updated = await UserLeave.updateOne(filter, updateDocs)
         .then((doc) => {
             return doc
@@ -129,16 +138,31 @@ module.exports.user_registration = async (req, res) => {
         }
 
         if (updated.matchedCount > 0 && updated.modifiedCount > 0) {
+            userLeaveInitiazed = true
+        }
+    }
+
+    if(userLeaveInitiazed){
+        const attendanceFormData = {
+            user_id: user.user_id,
+            username: user.username,
+            department_id: user.department_id,
+            attendance: []
+        }
+
+        const userAttendanceInstance = new UserDetails(attendanceFormData)
+        const saved = userAttendanceInstance.save()
+
+        if(!saved){
             return res.send({
-                message: "User Created !",
-                flag: "SUCCESS",
-            });
+                message: "Something went wrong",
+                flag: "FAIL"
+            })
         }
 
         return res.send({
-            message: "Something went wrong !",
-            log: updated,
-            flag: "FAIL",
+            message: "User Created !",
+            flag: "SUCCESS",
         });
     }
 };
@@ -210,16 +234,16 @@ module.exports.user_login = async (req, res) => {
                 });
             }
 
-            const arr = user_exist.user_id.split("-")
-            arr[0] = user_exist.role[0] + arr[0]
-            const auth = arr.join("-")
+            // const arr = user_exist.user_id.split("-")
+            // arr[0] = user_exist.role[0] + arr[0]
+            // const auth = arr.join("-")
 
             const output = {
-                auth: auth,
+                auth: user_exist.user_id,
                 user_id: user_exist.user_id,
                 username: user_exist.username,
                 role: user_exist.role,
-                department: user_exist.department,
+                department_id: user_exist.department_id,
                 dept_access: user_exist.dept_access,
                 message: "Login successful",
                 flag: "SUCCESS",

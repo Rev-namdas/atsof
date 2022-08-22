@@ -3,6 +3,8 @@ const mongoose = require('mongoose')
 
 const userDetailsSchema = new mongoose.Schema({
 	user_id: { type: String, required: true },
+	username: String,
+	department_id: Number,
 	attendance: [
 		{
 			month: Number,

@@ -2,12 +2,13 @@ require('dotenv').config()
 const mongoose = require('mongoose')
 
 const userSchema = new mongoose.Schema({
+	auth: String,
 	user_id: { type: String, required: true },
 	username: { type: String, required: true, unique: true },
 	password: { type: String, required: true, default: '1234' },
 	role: [{ type: Number, required: false, default: process.env.USER }],
 	dayoff: [{ type: Number, required: false }],
-	department: { id: Number, name: String },
+	department_id: Number,
 	dept_access: [Number],
 	active: { type: Boolean, default: true },
 	office_time: {

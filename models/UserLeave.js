@@ -4,6 +4,7 @@ const mongoose = require('mongoose')
 const userLeaveSchema = new mongoose.Schema({
 	user_id: { type: String, required: true },
 	username: String,
+	department_id: Number,
 	leave: [
 		{
 			leave_id: Number,

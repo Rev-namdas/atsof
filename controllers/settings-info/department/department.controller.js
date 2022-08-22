@@ -34,7 +34,7 @@ module.exports.create_department = async (req, res) => {
 		.select({ dept_id: 1 })
 
 	const newDept = new Departments({
-		dept_id: exist ? exist.dept_id + 1 : 1,
+		dept_id: exist ? (exist.dept_id + 1) : 1,
 		dept_name: dept_name
 	})
 

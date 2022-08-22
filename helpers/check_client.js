@@ -2,7 +2,7 @@ const Users = require("../models/Users");
 
 require("dotenv").config();
 
-module.exports.isAdmin = async (req, res, next) => {
+module.exports.check_client = async (req, res, next) => {
     const auth = req.headers.authorization;
 
     const filter = {};
@@ -22,10 +22,8 @@ module.exports.isAdmin = async (req, res, next) => {
         .then((data) => data)
         .catch(() => null);
 
-    if (
-        user?.role?.includes(parseInt(process.env.SUPER_ADMIN)) ||
-        user?.role?.includes(parseInt(process.env.ADMIN))
-    ) {
+    if (user) {
+        req.body.user = user
         next();
     } else {
         return res.send({
