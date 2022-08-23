@@ -23,6 +23,7 @@ module.exports.isSuperAdmin = async (req, res, next) => {
         .catch(() => null);
 
     if (user?.role?.includes(parseInt(process.env.SUPER_ADMIN))) {
+        req.body.user = user
         next();
     } else {
         return res.send({

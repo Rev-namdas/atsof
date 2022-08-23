@@ -26,6 +26,7 @@ module.exports.isAdmin = async (req, res, next) => {
         user?.role?.includes(parseInt(process.env.SUPER_ADMIN)) ||
         user?.role?.includes(parseInt(process.env.ADMIN))
     ) {
+        req.body.user = user
         next();
     } else {
         return res.send({

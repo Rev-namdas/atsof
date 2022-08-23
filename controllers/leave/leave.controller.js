@@ -4,7 +4,7 @@ const Users = require("../../models/Users");
 
 module.exports.leave_apply = async (req, res) => {
     const {
-        user_id,
+        user,
         from_date,
         to_date,
         taken_dates,
@@ -14,7 +14,6 @@ module.exports.leave_apply = async (req, res) => {
     } = req.body;
 
     const isValid = validateApiKey({
-        user_id,
         from_date,
         to_date,
         taken_dates,
@@ -33,7 +32,7 @@ module.exports.leave_apply = async (req, res) => {
     const filter = {};
     const newDocs = {};
 
-    filter["user_id"] = user_id;
+    filter["user_id"] = user.user_id;
     filter["applied_dates"] = {
         $nin: taken_dates.map((each) => each.date),
     };
@@ -98,8 +97,12 @@ module.exports.leave_apply = async (req, res) => {
 };
 
 module.exports.pending_leaves = async (req, res) => {
+    const { user } = req.body
     let filter = {};
 
+    filter["department_id"] = {
+        $in: user.dept_access
+    }
     filter["pending_status"] = {
         $gt: 0,
     };
@@ -107,6 +110,7 @@ module.exports.pending_leaves = async (req, res) => {
     let fields = {
         user_id: 1,
         username: 1,
+        department_id: 1,
         leave_dates: 1,
         pending_status: 1,
     };
@@ -296,28 +300,15 @@ module.exports.leave_decline = async (req, res) => {
 };
 
 module.exports.leave_recommend = async (req, res) => {
-    const { decision, user_id, employee_id, from_date, to_date } = req.body;
+    const { user, decision, employee_id, from_date, to_date } = req.body;
 
-    const isValid = validateApiKey({ decision, user_id, employee_id, from_date, to_date })
+    const isValid = validateApiKey({ decision, employee_id, from_date, to_date })
 
     if(!isValid){
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"
         })
-    }
-
-    const fields = {
-        user_id: 1,
-        username: 1,
-    };
-    const user_exist = await Users.findOne({ user_id }).select(fields);
-
-    if (!user_exist) {
-        return res.send({
-            message: "Recommend's User Not Found",
-            flag: "FAIL",
-        });
     }
 
     const filter = {};
@@ -328,19 +319,19 @@ module.exports.leave_recommend = async (req, res) => {
     filter["leave_dates.from_date"] = from_date;
     filter["leave_dates.to_date"] = to_date;
     filter["leave_dates.recommended"] = {
-        $nin: user_exist.username,
+        $nin: user.username,
     };
     filter["leave_dates.declined"] = {
-        $nin: user_exist.username,
+        $nin: user.username,
     };
 
     if (decision === "recommend") {
         updatedDoc["$push"] = {
-            "leave_dates.$.recommended": user_exist.username,
+            "leave_dates.$.recommended": user.username,
         };
     } else if (decision === "decline") {
         updatedDoc["$push"] = {
-            "leave_dates.$.declined": user_exist.username,
+            "leave_dates.$.declined": user.username,
         };
     }
 
@@ -388,18 +379,9 @@ module.exports.leave_recommend = async (req, res) => {
 };
 
 module.exports.user_leave_status = async (req, res) => {
-    const { user_id } = req.body;
+    const { user } = req.body;
 
-    const isValid = validateApiKey({ user_id })
-
-    if(!isValid){
-        return res.send({
-            message: "Invalid API Key",
-            flag: "FAIL"
-        })
-    }
-
-    const leave_details = await UserLeave.findOne({ user_id })
+    const leave_details = await UserLeave.findOne({ user_id: user.user_id })
         .then((data) => {
             return data;
         })

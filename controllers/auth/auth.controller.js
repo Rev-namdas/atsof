@@ -7,14 +7,6 @@ const { date_to_unix } = require("../../helpers/date_to_unix");
 const { validateApiKey } = require("../../helpers/validateApiKey");
 const UserDetails = require("../../models/UserDetails");
 
-
-/**
- * user registration api
- * @param {object} req for getting request
- * @param {object} res for sending reponses
- *
- * @api_fields user_name, password, role, dayoff, office_time
- */
 module.exports.user_registration = async (req, res) => {
     const { user_name, password, role, dayoff, office_time,
         leaves, department_id, dept_access } = req.body;

@@ -61,6 +61,8 @@ module.exports.fetch_users = async (req, res) => {
         user_id: 1,
         username: 1,
         role: 1,
+        department_id: 1,
+        dept_access: 1,
         active: 1,
     };
     

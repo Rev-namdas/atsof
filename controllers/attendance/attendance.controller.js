@@ -212,26 +212,18 @@ module.exports.fetch_details = async (req, res) => {
 };
 
 module.exports.fetch_user_lates = async (req, res) => {
-    const { user_id } = req.body;
+    const { user } = req.body;
 
-    const isValid = validateApiKey({ user_id })
-
-    if(!isValid){
-        return res.send({
-            message: "Invalid API Key",
-            flag: "FAIL"
-        })
+    const match_aggregate = {
+        "$unwind": "$attendance"
     }
-
-    const match_aggregate = {}
-    const unwind_aggregate = {}
-
-    unwind_aggregate["$unwind"] = "$attendance"
-    match_aggregate["$match"] = {
-        "$and": [
-            { user_id: user_id },
-            { "attendance.late": 1 }
-        ]
+    const unwind_aggregate = {
+        "$match": {
+            "$and": [
+                { user_id: user.user_id },
+                { "attendance.late": 1 }
+            ]
+        }
     }
     
     const result = await UserDetails
@@ -247,35 +239,22 @@ module.exports.fetch_user_lates = async (req, res) => {
 }
 
 module.exports.fetch_attendance_by_dept = async (req, res) => {
-    const { dept_ids } = req.body
+    const { user } = req.body
 
-    const isValid = validateApiKey({ dept_ids })
-
-    if(!isValid || !Array.isArray(dept_ids)){
-        return res.send({
-            message: "Invalid API Key",
-            flag: "FAIL"
-        })
+    const unwind = {
+        "$unwind": "$attendance"
     }
 
-    const filter = {}
-    filter["department.id"] = {
-        $in: dept_ids
+    const match = {
+        "$match": {
+            "department_id": {
+                $in: user?.dept_access
+            }
+        }
     }
 
     const attendances = await UserDetails
-        .aggregate([
-            {
-                $unwind: "$attendance"
-            },
-            {
-                $match: {
-                    "department.id": {
-                        $in: dept_ids
-                    }
-                }
-            }
-        ])
+        .aggregate([unwind, match])
         .then(res => {
             return res
         })
