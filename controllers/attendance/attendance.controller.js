@@ -320,6 +320,7 @@ module.exports.monthly_attendance = async (req, res) => {
     
     const attendances = {}
     const logouts = {}
+    const lates = {}
     /**
      * Find Month's Name By Date
      * 
@@ -343,6 +344,7 @@ module.exports.monthly_attendance = async (req, res) => {
     result.map(each => {
         attendances[each.attendance.date] = each.attendance.login_time
         logouts[each.attendance.date] = each.attendance.logout_time
+        lates[each.attendance.date] = each.attendance.late
     })
 
     const alldates = dates.map(each => {
@@ -352,27 +354,31 @@ module.exports.monthly_attendance = async (req, res) => {
                 date: each.date,
                 login_time: attendances[each.unix],
                 logout_time: logouts[each.unix],
+                late: lates[each.unix]
             }
         } if(user.dayoff[0] === getDay(each.date)){
             return {
                 month: getMonth(each.date),
                 date: each.date,
                 login_time: 'Day Off',
-                logout_time: "Day Off"
+                logout_time: "Day Off",
+                late: 0
             }
         } if(user.leaves[getDay(each.date)].includes(each.unix)){
             return {
                 month: getMonth(each.date),
                 date: each.date,
                 login_time: 'Leave',
-                logout_time: "Leave"
+                logout_time: "Leave",
+                late: 0
             }
         } else {
             return {
                 month: getMonth(each.date),
                 date: each.date,
                 login_time: "Absent",
-                logout_time: "Absent"
+                logout_time: "Absent",
+                late: 0
             }
         }
     })
