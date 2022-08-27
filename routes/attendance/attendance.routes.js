@@ -5,6 +5,8 @@ const {
     fetch_attendance_by_user_id,
     fetch_user_lates,
     fetch_attendance_by_dept,
+    monthly_attendance,
+    search_attendance_by_date,
 } = require("../../controllers/attendance/attendance.controller");
 const { isSuperAdmin } = require("../../helpers/isSuperAdmin");
 const { isAdmin } = require("../../helpers/isAdmin");
@@ -19,6 +21,8 @@ module.exports = (app) => {
     router.get("/list/all", [isSuperAdmin], fetch_details);
     router.get("/list/by-dept", [isAdmin], fetch_attendance_by_dept);
     router.get("/late", [check_client], fetch_user_lates);
+    router.get("/monthly", [check_client], monthly_attendance);
+    router.post("/search-by-dates", [check_client], search_attendance_by_date);
 
     app.use("/api/v1/attendance", router);
 

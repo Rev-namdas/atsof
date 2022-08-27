@@ -8,17 +8,7 @@ module.exports.check_client = async (req, res, next) => {
     const filter = {};
     filter["auth"] = auth;
 
-    const fields = {
-        user_id: 1,
-        username: 1,
-        role: 1,
-        active: 1,
-        department: 1,
-        dept_access: 1,
-    };
-
     const user = await Users.findOne(filter)
-        .select(fields)
         .then((data) => data)
         .catch(() => null);
 

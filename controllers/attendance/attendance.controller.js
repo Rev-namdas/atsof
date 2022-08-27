@@ -2,6 +2,8 @@ const UserDetails = require("../../models/UserDetails");
 const Users = require("../../models/Users");
 const moment = require("moment");
 const { validateApiKey } = require("../../helpers/validateApiKey");
+const { datesOfAMonth } = require("../../helpers/datesOfAMonth");
+const { datesBetweenStartEndDate } = require("../../helpers/datesBetweenStartEndDate");
 
 module.exports.save_attendance = async (req, res) => {
     const { user_id, username, department_id, month, date, 
@@ -276,5 +278,215 @@ module.exports.fetch_attendance_by_dept = async (req, res) => {
         attendances: attendances,
         message: "Fetched Successfully",
         flag: "SUCCESS"
+    })
+}
+
+module.exports.monthly_attendance = async (req, res) => {
+    const { user } = req.body
+
+    const currentYear = moment().year()
+    const currentMonth = moment().month() + 1
+    const dates = datesOfAMonth(currentYear, currentMonth)
+    const firstDate = dates[0].unix
+    const lastDate = dates[dates.length - 1].unix
+
+    const unwind = {
+        "$unwind": "$attendance"
+    }
+
+    const match = {
+        "$match": {
+            "$and": [
+                { "user_id": user.user_id },
+                { "attendance.date": {
+                    "$gte": firstDate,
+                    "$lte": lastDate
+                } 
+                }
+            ]
+        }
+    }
+
+    const result = await UserDetails.aggregate([unwind, match])
+        .then(result => result)
+        .catch(err => {
+            return {
+                message: err.message,
+                flag: "FAIL"
+            }
+        })
+
+    const foundDates = result.map(each => each.attendance.date)
+    
+    const attendances = {}
+    const logouts = {}
+    /**
+     * Find Month's Name By Date
+     * 
+     * @param {String} date  string date as this format DD-MM-YYYY
+     * @returns Month's Name in String
+     */
+    const getMonth = (date) => {
+        return moment(date, "DD-MM-YYYY").format("MMMM")
+    }
+
+    /**
+     * Find Day's Of The Month By Date
+     * 
+     * @param {String} date string date as this format DD-MM-YYYY
+     * @returns Month's Full Name in String
+     */
+    const getDay = (date) => {
+        return moment(date, "DD-MM-YYYY").day()
+    }
+
+    result.map(each => {
+        attendances[each.attendance.date] = each.attendance.login_time
+        logouts[each.attendance.date] = each.attendance.logout_time
+    })
+
+    const alldates = dates.map(each => {
+        if(foundDates.includes(each.unix)){
+            return {
+                month: getMonth(each.date),
+                date: each.date,
+                login_time: attendances[each.unix],
+                logout_time: logouts[each.unix],
+            }
+        } if(user.dayoff[0] === getDay(each.date)){
+            return {
+                month: getMonth(each.date),
+                date: each.date,
+                login_time: 'Day Off',
+                logout_time: "Day Off"
+            }
+        } if(user.leaves[getDay(each.date)].includes(each.unix)){
+            return {
+                month: getMonth(each.date),
+                date: each.date,
+                login_time: 'Leave',
+                logout_time: "Leave"
+            }
+        } else {
+            return {
+                month: getMonth(each.date),
+                date: each.date,
+                login_time: "Absent",
+                logout_time: "Absent"
+            }
+        }
+    })
+
+    res.send({
+        attendances: alldates,
+    })
+}
+
+module.exports.search_attendance_by_date = async (req, res) => {
+    const { user, start_date, end_date } = req.body
+
+    const isValid = validateApiKey({ start_date, end_date })
+
+    if(!isValid){
+        return res.send({
+            message: "Invalid API Key",
+            flag: "FAIL"
+        })
+    }
+
+    const dates = datesBetweenStartEndDate(start_date, end_date)
+
+    const firstDate = dates[0].unix
+    const lastDate = dates[dates.length - 1].unix
+
+    const unwind = {
+        "$unwind": "$attendance"
+    }
+
+    const match = {
+        "$match": {
+            "$and": [
+                { "user_id": user.user_id },
+                { "attendance.date": {
+                    "$gte": firstDate,
+                    "$lte": lastDate
+                } 
+                }
+            ]
+        }
+    }
+
+    const result = await UserDetails.aggregate([unwind, match])
+        .then(result => result)
+        .catch(err => {
+            return {
+                message: err.message,
+                flag: "FAIL"
+            }
+        })
+
+    const foundDates = result.map(each => each.attendance.date)
+    
+    const attendances = {}
+    const logouts = {}
+    /**
+     * Find Month's Name By Date
+     * 
+     * @param {String} date  string date as this format DD-MM-YYYY
+     * @returns Month's Name in String
+     */
+    const getMonth = (date) => {
+        return moment(date, "DD-MM-YYYY").format("MMMM")
+    }
+
+    /**
+     * Find Day's Of The Month By Date
+     * 
+     * @param {String} date string date as this format DD-MM-YYYY
+     * @returns Month's Full Name in String
+     */
+    const getDay = (date) => {
+        return moment(date, "DD-MM-YYYY").day()
+    }
+
+    result.map(each => {
+        attendances[each.attendance.date] = each.attendance.login_time
+        logouts[each.attendance.date] = each.attendance.logout_time
+    })
+
+    const alldates = dates.map(each => {
+        if(foundDates.includes(each.unix)){
+            return {
+                month: getMonth(each.date),
+                date: each.date,
+                login_time: attendances[each.unix],
+                logout_time: logouts[each.unix],
+            }
+        } if(user.dayoff[0] === getDay(each.date)){
+            return {
+                month: getMonth(each.date),
+                date: each.date,
+                login_time: 'Day Off',
+                logout_time: "Day Off"
+            }
+        } if(user.leaves[getDay(each.date)].includes(each.unix)){
+            return {
+                month: getMonth(each.date),
+                date: each.date,
+                login_time: 'Leave',
+                logout_time: "Leave"
+            }
+        } else {
+            return {
+                month: getMonth(each.date),
+                date: each.date,
+                login_time: "Absent",
+                logout_time: "Absent"
+            }
+        }
+    })
+
+    res.send({
+        attendances: alldates,
     })
 }
