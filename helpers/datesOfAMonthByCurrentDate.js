@@ -1,15 +1,14 @@
 const moment = require("moment")
 
 /**
- * For getting dates of a specific month by end date
+ * For getting dates of a specific month by current date
  * 
- * @method datesOfAMonthByEndDate
- * @param {Unix} end_date unix timestamp
- * @returns Array of Dates of current month till end date
+ * @method datesOfAMonthByCurrentDate
+ * @returns Array of Dates of current month till today
  */
-const datesOfAMonthByEndDate = (end_date) => {
+module.exports.datesOfAMonthByCurrentDate = () => {
 	const firstDate = moment().startOf('month')
-	const lastDate = moment(end_date * 1000)
+	const lastDate = moment()
 
 	const difference = lastDate.diff(firstDate, "days")
 
@@ -26,8 +25,5 @@ const datesOfAMonthByEndDate = (end_date) => {
 		arrOfDays.push({ date, unix })
 	}
 
-	console.log(arrOfDays);
 	return arrOfDays
 }
-
-datesOfAMonthByEndDate(1661676825)

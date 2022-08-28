@@ -4,6 +4,7 @@ const moment = require("moment");
 const { validateApiKey } = require("../../helpers/validateApiKey");
 const { datesOfAMonth } = require("../../helpers/datesOfAMonth");
 const { datesBetweenStartEndDate } = require("../../helpers/datesBetweenStartEndDate");
+const { datesOfAMonthByCurrentDate } = require("../../helpers/datesOfAMonthByCurrentDate");
 
 module.exports.save_attendance = async (req, res) => {
     const { user_id, username, department_id, month, date, 
@@ -240,8 +241,9 @@ module.exports.fetch_user_lates = async (req, res) => {
     return res.send(result)
 }
 
-module.exports.fetch_attendance_by_dept = async (req, res) => {
+module.exports.fetch_attendance_by_dept_access = async (req, res) => {
     const { user } = req.body
+    const today = moment().startOf('day').unix()
 
     const unwind = {
         "$unwind": "$attendance"
@@ -249,9 +251,19 @@ module.exports.fetch_attendance_by_dept = async (req, res) => {
 
     const match = {
         "$match": {
-            "department_id": {
-                $in: user?.dept_access
-            }
+            "$and": [
+                {
+                    "department_id": {
+                        $in: user?.dept_access
+                    }
+                },
+                {
+                    "attendance.date": {
+                        "$gte": today,
+                        "$lte": today
+                    }
+                }
+            ]
         }
     }
 
@@ -281,12 +293,95 @@ module.exports.fetch_attendance_by_dept = async (req, res) => {
     })
 }
 
+module.exports.search_attendance_by_dept_access = async (req, res) => {
+    const { user, date } = req.body
+
+    const filter = {
+        "department_id": {
+            "$in": user.dept_access
+        }
+    }
+    const field = {
+        username: 1,
+        department_id: 1
+    }
+
+    const users = await Users.find(filter)
+        .select(field)
+        .then(result => result)
+        .catch(err => {
+            return {
+                message: err.message,
+                flag: "FAIL"
+            }
+        })
+
+    if(!users){
+        return {
+            message: "Something went wrong",
+            flag: "FAIL"
+        }
+    }
+
+    const unwind = {
+        "$unwind": "$attendance"
+    }
+
+    const match = {
+        "$match": {
+            "$and": [
+                {
+                    "department_id": {
+                        $in: user?.dept_access
+                    }
+                },
+                {
+                    "attendance.date": {
+                        "$gte": date,
+                        "$lte": date
+                    }
+                }
+            ]
+        }
+    }
+
+    const attendances = await UserDetails
+        .aggregate([unwind, match])
+        .then(res => {
+            return res
+        })
+        .catch(err => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
+        })
+
+    if(!attendances){
+        return res.send({
+            message: "Something went wrong",
+            flag: "FAIL"
+        })
+    }
+
+    const result = []
+    users.map(eachUser => {
+        const res = attendances.filter(each => each.username === eachUser.username)
+        result.push(...res)
+    })
+
+    return res.send({
+        result: result,
+        attendances: attendances,
+        message: "Fetched Successfully",
+        flag: "SUCCESS"
+    })
+}
+
 module.exports.monthly_attendance = async (req, res) => {
     const { user } = req.body
 
-    const currentYear = moment().year()
-    const currentMonth = moment().month() + 1
-    const dates = datesOfAMonth(currentYear, currentMonth)
+    const dates = datesOfAMonthByCurrentDate()
     const firstDate = dates[0].unix
     const lastDate = dates[dates.length - 1].unix
 
@@ -307,7 +402,7 @@ module.exports.monthly_attendance = async (req, res) => {
         }
     }
 
-    const result = await UserDetails.aggregate([unwind, match])
+    const userAttendance = await UserDetails.aggregate([unwind, match])
         .then(result => result)
         .catch(err => {
             return {
@@ -316,7 +411,7 @@ module.exports.monthly_attendance = async (req, res) => {
             }
         })
 
-    const foundDates = result.map(each => each.attendance.date)
+    const presentDates = userAttendance.map(each => each.attendance.date)
     
     const attendances = {}
     const logouts = {}
@@ -341,14 +436,14 @@ module.exports.monthly_attendance = async (req, res) => {
         return moment(date, "DD-MM-YYYY").day()
     }
 
-    result.map(each => {
+    userAttendance.map(each => {
         attendances[each.attendance.date] = each.attendance.login_time
         logouts[each.attendance.date] = each.attendance.logout_time
         lates[each.attendance.date] = each.attendance.late
     })
 
     const alldates = dates.map(each => {
-        if(foundDates.includes(each.unix)){
+        if(presentDates.includes(each.unix)){
             return {
                 month: getMonth(each.date),
                 date: each.date,
@@ -422,7 +517,7 @@ module.exports.search_attendance_by_date = async (req, res) => {
         }
     }
 
-    const result = await UserDetails.aggregate([unwind, match])
+    const userAttendance = await UserDetails.aggregate([unwind, match])
         .then(result => result)
         .catch(err => {
             return {
@@ -431,7 +526,7 @@ module.exports.search_attendance_by_date = async (req, res) => {
             }
         })
 
-    const foundDates = result.map(each => each.attendance.date)
+    const presentDates = userAttendance.map(each => each.attendance.date)
     
     const attendances = {}
     const logouts = {}
@@ -455,13 +550,13 @@ module.exports.search_attendance_by_date = async (req, res) => {
         return moment(date, "DD-MM-YYYY").day()
     }
 
-    result.map(each => {
+    userAttendance.map(each => {
         attendances[each.attendance.date] = each.attendance.login_time
         logouts[each.attendance.date] = each.attendance.logout_time
     })
 
     const alldates = dates.map(each => {
-        if(foundDates.includes(each.unix)){
+        if(presentDates.includes(each.unix)){
             return {
                 month: getMonth(each.date),
                 date: each.date,
