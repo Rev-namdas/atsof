@@ -2,9 +2,81 @@ const UserDetails = require("../../models/UserDetails");
 const Users = require("../../models/Users");
 const moment = require("moment");
 const { validateApiKey } = require("../../helpers/validateApiKey");
-const { datesOfAMonth } = require("../../helpers/datesOfAMonth");
 const { datesBetweenStartEndDate } = require("../../helpers/datesBetweenStartEndDate");
 const { datesOfAMonthByCurrentDate } = require("../../helpers/datesOfAMonthByCurrentDate");
+const Departments = require("../../models/settings-info/Departments");
+
+/**
+ * Find Month's Name By Date
+ * 
+ * @param {String} date  string date as this format DD-MM-YYYY
+ * @returns Month's Name in String
+ */
+const getMonth = (date) => {
+    return moment(date, "DD-MM-YYYY").format("MMMM")
+}
+
+/**
+ * Find Month's Name By Date
+ * 
+ * @param {Number} unix unix timestamp
+ * @returns Month's Name in String
+ */
+const getMonthByUnix = (unix) => {
+    return moment(unix * 1000).format("MMMM")
+}
+
+/**
+ * Find Month Name By Month Serial No
+ * 
+ * 
+ * @param {Number} number month's serial number
+ * @returns Month Name
+ */
+const getMonthByNo = (number) => {
+    return moment(number, "MM").format("MMMM")
+}
+
+/**
+ * Find Day's Of The Month By Date
+ * 
+ * @param {String} date string date as this format DD-MM-YYYY
+ * @returns Month's Full Name in String
+ */
+const getDay = (date) => {
+    return moment(date, "DD-MM-YYYY").day()
+}
+
+/**
+ * Find Day's Of The Month By Date
+ * 
+ * @param {Number} unix unix date timestamp
+ * @returns Month's Full Name in String
+ */
+const getDayByUnix = (unix) => {
+    return moment(unix * 1000).day()
+}
+
+/**
+ * Find Date By Unix Timestamp
+ * 
+ * @param {Number} unix unix date timestamp
+ * @returns Date String
+ */
+const getDateByUnix = (unix) => {
+    return moment(unix * 1000).format("DD-MM-YYYY")
+}
+
+/**
+ * Find Department Name By Id
+ * 
+ * @param {Number} id department id in number
+ * @param {Array} departments array of departments
+ * @returns Department Name as String
+ */
+const getDepartmentName = (id, departments) => {
+    return departments.find(each => each.dept_id === id).dept_name
+}
 
 module.exports.save_attendance = async (req, res) => {
     const { user_id, username, department_id, month, date, 
@@ -245,6 +317,35 @@ module.exports.fetch_attendance_by_dept_access = async (req, res) => {
     const { user } = req.body
     const today = moment().startOf('day').unix()
 
+    const filter = {
+        "department_id": {
+            "$in": user.dept_access
+        }
+    }
+    const field = {
+        username: 1,
+        department_id: 1,
+        dayoff: 1,
+        leaves: 1
+    }
+
+    const users = await Users.find(filter)
+        .select(field)
+        .then(result => result)
+        .catch(err => {
+            return {
+                message: err.message,
+                flag: "FAIL"
+            }
+        })
+
+    if(!users){
+        return {
+            message: "Something went wrong",
+            flag: "FAIL"
+        }
+    }
+
     const unwind = {
         "$unwind": "$attendance"
     }
@@ -286,8 +387,69 @@ module.exports.fetch_attendance_by_dept_access = async (req, res) => {
         })
     }
 
+    const departments = await Departments.find()
+        .then(result => result)
+        .catch(err => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
+        })
+
+    const presentUsersUsername = new Set(attendances.map(each => each.username))
+
+    const result = users.map(eachUser => {
+        const departmentName = getDepartmentName(eachUser.department_id, departments)
+        const monthName = getMonthByUnix(today)
+        const stringDate = getDateByUnix(today)
+
+        if(presentUsersUsername.has(eachUser.username)){
+            const userATInfo = attendances.find(each => each.username === eachUser.username)
+            
+            return {
+                username: userATInfo.username,
+                department: getDepartmentName(userATInfo.department_id, departments),
+                month: getMonthByNo(userATInfo.attendance.month),
+                date: getDateByUnix(userATInfo.attendance.date),
+                login_time: userATInfo.attendance.login_time,
+                logout_time: userATInfo.attendance.logout_time, 
+                late: userATInfo.attendance.late
+            }
+        } else if(eachUser.dayoff[0] === getDayByUnix(today)){
+            return {
+                username: eachUser.username,
+                department: departmentName,
+                month: monthName,
+                date: stringDate,
+                login_time: "Day Off",
+                logout_time: "Day Off",
+                late: 0
+            }
+        } else if(eachUser.leaves[getDayByUnix(today)].includes(today)){
+            return {
+                username: eachUser.username,
+                department: departmentName,
+                month: monthName,
+                date: stringDate,
+                login_time: "Leave",
+                logout_time: "Leave",
+                late: 0
+            }
+        } else {
+            return {
+                username: eachUser.username,
+                department: departmentName,
+                month: monthName,
+                date: stringDate,
+                login_time: "Absent",
+                logout_time: "Absent",
+                late: 0 
+            }
+        }
+    })
+
     return res.send({
-        attendances: attendances,
+        attendances: result,
         message: "Fetched Successfully",
         flag: "SUCCESS"
     })
@@ -303,7 +465,9 @@ module.exports.search_attendance_by_dept_access = async (req, res) => {
     }
     const field = {
         username: 1,
-        department_id: 1
+        department_id: 1,
+        dayoff: 1,
+        leaves: 1
     }
 
     const users = await Users.find(filter)
@@ -364,15 +528,69 @@ module.exports.search_attendance_by_dept_access = async (req, res) => {
         })
     }
 
-    const result = []
-    users.map(eachUser => {
-        const res = attendances.filter(each => each.username === eachUser.username)
-        result.push(...res)
+    const departments = await Departments.find()
+        .then(result => result)
+        .catch(err => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
+        })
+
+    const presentUsersUsername = new Set(attendances.map(each => each.username))
+
+    const result = users.map(eachUser => {
+        const departmentName = getDepartmentName(eachUser.department_id, departments)
+        const monthName = getMonthByUnix(date)
+        const stringDate = getDateByUnix(date)
+
+        if(presentUsersUsername.has(eachUser.username)){
+            const userATInfo = attendances.find(each => each.username === eachUser.username)
+            
+            return {
+                username: userATInfo.username,
+                department: getDepartmentName(userATInfo.department_id, departments),
+                month: getMonthByNo(userATInfo.attendance.month),
+                date: getDateByUnix(userATInfo.attendance.date),
+                login_time: userATInfo.attendance.login_time,
+                logout_time: userATInfo.attendance.logout_time, 
+                late: userATInfo.attendance.late
+            }
+        } else if(eachUser.dayoff[0] === getDayByUnix(date)){
+            return {
+                username: eachUser.username,
+                department: departmentName,
+                month: monthName,
+                date: stringDate,
+                login_time: "Day Off",
+                logout_time: "Day Off",
+                late: 0
+            }
+        } else if(eachUser.leaves[getDayByUnix(date)].includes(date)){
+            return {
+                username: eachUser.username,
+                department: departmentName,
+                month: monthName,
+                date: stringDate,
+                login_time: "Leave",
+                logout_time: "Leave",
+                late: 0
+            }
+        } else {
+            return {
+                username: eachUser.username,
+                department: departmentName,
+                month: monthName,
+                date: stringDate,
+                login_time: "Absent",
+                logout_time: "Absent",
+                late: 0 
+            }
+        }
     })
 
     return res.send({
-        result: result,
-        attendances: attendances,
+        attendances: result,
         message: "Fetched Successfully",
         flag: "SUCCESS"
     })
@@ -416,25 +634,6 @@ module.exports.monthly_attendance = async (req, res) => {
     const attendances = {}
     const logouts = {}
     const lates = {}
-    /**
-     * Find Month's Name By Date
-     * 
-     * @param {String} date  string date as this format DD-MM-YYYY
-     * @returns Month's Name in String
-     */
-    const getMonth = (date) => {
-        return moment(date, "DD-MM-YYYY").format("MMMM")
-    }
-
-    /**
-     * Find Day's Of The Month By Date
-     * 
-     * @param {String} date string date as this format DD-MM-YYYY
-     * @returns Month's Full Name in String
-     */
-    const getDay = (date) => {
-        return moment(date, "DD-MM-YYYY").day()
-    }
 
     userAttendance.map(each => {
         attendances[each.attendance.date] = each.attendance.login_time
@@ -530,29 +729,12 @@ module.exports.search_attendance_by_date = async (req, res) => {
     
     const attendances = {}
     const logouts = {}
-    /**
-     * Find Month's Name By Date
-     * 
-     * @param {String} date  string date as this format DD-MM-YYYY
-     * @returns Month's Name in String
-     */
-    const getMonth = (date) => {
-        return moment(date, "DD-MM-YYYY").format("MMMM")
-    }
-
-    /**
-     * Find Day's Of The Month By Date
-     * 
-     * @param {String} date string date as this format DD-MM-YYYY
-     * @returns Month's Full Name in String
-     */
-    const getDay = (date) => {
-        return moment(date, "DD-MM-YYYY").day()
-    }
+    const lates = {}
 
     userAttendance.map(each => {
         attendances[each.attendance.date] = each.attendance.login_time
         logouts[each.attendance.date] = each.attendance.logout_time
+        lates[each.attendance.date] = each.attendance.late
     })
 
     const alldates = dates.map(each => {
@@ -562,27 +744,31 @@ module.exports.search_attendance_by_date = async (req, res) => {
                 date: each.date,
                 login_time: attendances[each.unix],
                 logout_time: logouts[each.unix],
+                late: lates[each.unix]
             }
         } if(user.dayoff[0] === getDay(each.date)){
             return {
                 month: getMonth(each.date),
                 date: each.date,
                 login_time: 'Day Off',
-                logout_time: "Day Off"
+                logout_time: "Day Off",
+                late: 0
             }
         } if(user.leaves[getDay(each.date)].includes(each.unix)){
             return {
                 month: getMonth(each.date),
                 date: each.date,
                 login_time: 'Leave',
-                logout_time: "Leave"
+                logout_time: "Leave",
+                late: 0
             }
         } else {
             return {
                 month: getMonth(each.date),
                 date: each.date,
                 login_time: "Absent",
-                logout_time: "Absent"
+                logout_time: "Absent",
+                late: 0
             }
         }
     })

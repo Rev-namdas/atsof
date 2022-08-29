@@ -206,8 +206,8 @@ module.exports.leave_approve = async (req, res) => {
             (each) => each.leave_id === approved_leave.leave_id
         );
 
-        taken_leave_type.leave_balance =
-            taken_leave_type.leave_balance - leave_count;
+        // taken_leave_type.leave_balance =
+        //     taken_leave_type.leave_balance - leave_count;
         taken_leave_type.leave_taken =
             taken_leave_type.leave_taken + leave_count;
     }

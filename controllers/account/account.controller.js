@@ -1,5 +1,7 @@
 const { validateApiKey } = require("../../helpers/validateApiKey");
+const Departments = require("../../models/settings-info/Departments");
 const Users = require("../../models/Users");
+const moment = require("moment")
 
 module.exports.account_status_change = async (req, res) => {
     const { user_id, account_status } = req.body;
@@ -76,6 +78,57 @@ module.exports.fetch_users = async (req, res) => {
 
     return res.send(result);
 };
+
+module.exports.fetch_user_informations = async (req, res) => {
+    const { user } = req.body
+
+    const departmentName = async (ids) => {
+        const filter = {
+            dept_id: {
+                $in: ids
+            }
+        }
+        const result = await Departments.find(filter)
+            .then(result => result)
+            .catch(err => {
+                return {
+                    message: err.message,
+                    flag: "FAIL"
+                }
+            })
+
+        if(result.length === 1){
+            return result[0].dept_name
+        } else {
+            return result.map(each => each.dept_name)
+        }
+
+    }
+
+    const getOfficeTime = (time) => {
+        const keys = Object.keys(time)
+		const res = keys.map(each => {
+			return {
+				day: moment().day(each).format("dddd"),
+				starts: time[each].starts,
+				ends: time[each].ends
+			}
+		})
+		
+        return res
+    }
+
+    const output = {
+        username: user.username,
+        department: await departmentName([user.department_id]),
+        dayoff: moment().day(user.dayoff[0]).format("dddd"),
+        role: user.role[0],
+        dept_access: await departmentName(user.dept_access),
+        office_time: getOfficeTime(user.office_time)
+    }
+
+    return res.send(output)
+}
 
 module.exports.fetch_users_by_id = async (req, res) => {
     const { ids } = req.body
