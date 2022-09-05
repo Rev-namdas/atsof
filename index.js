@@ -25,6 +25,8 @@ require('./routes/attendance/attendance.routes')(app)
 require('./routes/account/account.routes')(app)
 // leave related routes
 require('./routes/leave/leave.routes')(app)
+// govt leave/holiday related routes
+require('./routes/settings-info/govt-leaves/govtleaves.routes')(app)
 // department related routes
 require('./routes/settings-info/department/department.routes')(app)
 

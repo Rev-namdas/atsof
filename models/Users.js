@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
 		4:	[{ type: Number }],
 		5:	[{ type: Number }],
 		6:	[{ type: Number }]
-	},
+	}
 }, {
 	collection: 'users'
 })

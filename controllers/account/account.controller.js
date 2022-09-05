@@ -181,3 +181,33 @@ module.exports.fetch_user_by_auth = async (req, res) => {
 
     return res.send(result);
 };
+
+module.exports.fetch_users_by_dept = async (req, res) => {
+    const { dept_ids } = req.body
+
+	const isValid = validateApiKey({ dept_ids })
+
+	if(!isValid){
+		return res.send({
+			message: "Invalid API Key",
+			flag: "FAIL"
+		})
+	}
+
+	const filter = {
+		"department_id": {
+			"$in": dept_ids
+		}
+	}
+	
+	const users = await Users.find(filter)
+							.then(result => result)
+							.catch(err => {
+								return res.send({
+									message: err.message,
+									flag: "FAIL"
+								})
+							})
+
+    res.send(users)
+}

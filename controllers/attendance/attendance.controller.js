@@ -5,6 +5,7 @@ const { validateApiKey } = require("../../helpers/validateApiKey");
 const { datesBetweenStartEndDate } = require("../../helpers/datesBetweenStartEndDate");
 const { datesOfAMonthByCurrentDate } = require("../../helpers/datesOfAMonthByCurrentDate");
 const Departments = require("../../models/settings-info/Departments");
+const GovtLeaves = require("../../models/settings-info/GovtLeaves");
 
 /**
  * Find Month's Name By Date
@@ -76,6 +77,10 @@ const getDateByUnix = (unix) => {
  */
 const getDepartmentName = (id, departments) => {
     return departments.find(each => each.dept_id === id).dept_name
+}
+
+const getGovtLeaveName = (date, leaves) => {
+    return leaves.find(each => each.leave_date === date).leave_name
 }
 
 module.exports.save_attendance = async (req, res) => {
@@ -396,6 +401,15 @@ module.exports.fetch_attendance_by_dept_access = async (req, res) => {
             })
         })
 
+    const govtLeaves = await GovtLeaves.find()
+        .then(result => result)
+        .catch(err => {
+            return res.send({
+                message: err.message,
+                flag: "FAIL"
+            })
+        })
+
     const presentUsersUsername = new Set(attendances.map(each => each.username))
 
     const result = users.map(eachUser => {
@@ -431,8 +445,10 @@ module.exports.fetch_attendance_by_dept_access = async (req, res) => {
                 department: departmentName,
                 month: monthName,
                 date: stringDate,
-                login_time: "Leave",
-                logout_time: "Leave",
+                login_time: getGovtLeaveName(today, govtLeaves) || "Leave",
+                logout_time: 
+                    (getGovtLeaveName(today, govtLeaves) && "Holiday") 
+                    || "Leave",
                 late: 0
             }
         } else {
