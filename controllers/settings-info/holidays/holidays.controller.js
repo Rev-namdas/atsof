@@ -1,9 +1,9 @@
 const { validateApiKey } = require("../../../helpers/validateApiKey")
-const GovtLeaves = require("../../../models/settings-info/GovtLeaves")
+const Holidays = require("../../../models/settings-info/Holidays")
 const Users = require("../../../models/Users")
 const moment = require("moment")
 
-module.exports.createGovtLeave = async (req, res) => {
+module.exports.createHoliday = async (req, res) => {
 	const { leave_name, leave_date } = req.body	
 	let leave_id
 
@@ -16,16 +16,16 @@ module.exports.createGovtLeave = async (req, res) => {
 		})
 	}
 
-	const leaveExist = await GovtLeaves.countDocuments()
+	const leaveExist = await Holidays.countDocuments()
 
 	if(leaveExist === 0){
 		leave_id = 1
 	} else {
-		const lastLeave = await GovtLeaves.findOne().sort({ "leave_id": -1 })
+		const lastLeave = await Holidays.findOne().sort({ "leave_id": -1 })
 		leave_id = lastLeave.leave_id + 1
 	}
 
-	const newLeave = new GovtLeaves({ leave_id, leave_name, leave_date })
+	const newLeave = new Holidays({ leave_id, leave_name, leave_date })
 
 	const output = await newLeave.save()
 			.then(() => {
@@ -51,8 +51,8 @@ module.exports.createGovtLeave = async (req, res) => {
 	res.send(output)
 }
 
-module.exports.getGovtLeaves = async (req, res) => {
-	const leaves = await GovtLeaves.find()
+module.exports.getHolidays = async (req, res) => {
+	const leaves = await Holidays.find()
 							.then(res => {
 								return {
 									message: "Fetched Successfully",
@@ -71,10 +71,10 @@ module.exports.getGovtLeaves = async (req, res) => {
 	res.send(leaves)
 }
 
-module.exports.assignGovtLeaves = async (req, res) => {
-	const { dept_ids, leave_date } = req.body
+module.exports.assignHolidays = async (req, res) => {
+	const { holidays, dept_id, user_ids } = req.body
 
-	const isValid = validateApiKey({ dept_ids, leave_date })
+	const isValid = validateApiKey({ holidays, dept_id, user_ids })
 
 	if(!isValid){
 		return res.send({
@@ -83,10 +83,13 @@ module.exports.assignGovtLeaves = async (req, res) => {
 		})
 	}
 
-	const filter = {
-		"department_id": {
-			"$in": dept_ids
-		}
+	const filter = {}
+	let error_dates = []
+
+	if(user_ids === 'All'){
+		filter["department_id"] = dept_id
+	} else {
+		filter["user_id"] = { "$in": user_ids }
 	}
 	
 	const users = await Users.find(filter)
@@ -98,10 +101,19 @@ module.exports.assignGovtLeaves = async (req, res) => {
 								})
 							})
 
-	users.map(eachUser => {
-		eachUser.leaves[moment(leave_date * 1000).day()].push(leave_date)
-		eachUser.save()
+	holidays.map(eachHoliday => {
+		users.map(eachUser => {
+			if(
+				eachUser.leaves[moment(eachHoliday * 1000).day()]
+				.includes(eachHoliday)
+			){
+				error_dates.push({ username: eachUser.username, holiday: eachHoliday })
+			} else {
+				eachUser.leaves[moment(eachHoliday * 1000).day()].push(eachHoliday)
+				eachUser.save()
+			}
+		})
 	})
 
-	res.send({ users: users })
+	res.send({ users: users, error_dates: error_dates })
 }

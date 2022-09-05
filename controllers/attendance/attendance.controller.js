@@ -5,7 +5,7 @@ const { validateApiKey } = require("../../helpers/validateApiKey");
 const { datesBetweenStartEndDate } = require("../../helpers/datesBetweenStartEndDate");
 const { datesOfAMonthByCurrentDate } = require("../../helpers/datesOfAMonthByCurrentDate");
 const Departments = require("../../models/settings-info/Departments");
-const GovtLeaves = require("../../models/settings-info/GovtLeaves");
+const Holidays = require("../../models/settings-info/Holidays");
 
 /**
  * Find Month's Name By Date
@@ -401,7 +401,7 @@ module.exports.fetch_attendance_by_dept_access = async (req, res) => {
             })
         })
 
-    const govtLeaves = await GovtLeaves.find()
+    const govtLeaves = await Holidays.find()
         .then(result => result)
         .catch(err => {
             return res.send({
