@@ -64,3 +64,30 @@ module.exports.get_departments = async (req, res) => {
 	}
 
 }
+
+module.exports.delete_department_by_dept_id = async (req, res) => {
+	const { dept_id } = req.params
+
+	const result = await Departments.findOneAndDelete({ dept_id })
+						.then(res => {
+							if(res === null){
+								return {
+									message: "Department Not Found",
+									flag: "FAIL"
+								}
+							}
+
+							return {
+								message: "Removed Successfully",
+								flag: "SUCCESS"
+							}
+						})
+						.catch(err => {
+							return {
+								message: err.message,
+								flag: "FAIL"
+							}
+						})
+
+	res.send(result)
+}

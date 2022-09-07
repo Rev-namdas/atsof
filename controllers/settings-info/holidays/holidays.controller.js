@@ -101,6 +101,8 @@ module.exports.assignHolidays = async (req, res) => {
 								})
 							})
 
+	let assignedUsers = []
+
 	holidays.map(eachHoliday => {
 		users.map(eachUser => {
 			if(
@@ -111,9 +113,15 @@ module.exports.assignHolidays = async (req, res) => {
 			} else {
 				eachUser.leaves[moment(eachHoliday * 1000).day()].push(eachHoliday)
 				eachUser.save()
+				assignedUsers.push(eachUser)
 			}
 		})
 	})
 
-	res.send({ users: users, error_dates: error_dates })
+	res.send({
+		message: "Update Complete",
+		flag: "SUCCESS",
+		users: assignedUsers, 
+		error_dates: error_dates
+	})
 }
