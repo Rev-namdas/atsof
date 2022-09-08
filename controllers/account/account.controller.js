@@ -9,6 +9,8 @@ module.exports.account_status_change = async (req, res) => {
     const isValid = validateApiKey({ user_id, account_status })
 
     if(!isValid){
+        console.log(`❌ account.controller | 
+            account_status_change: Invalid API Key`);
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"
@@ -28,13 +30,20 @@ module.exports.account_status_change = async (req, res) => {
             return data
         })
         .catch((err) => {
+            console.log(`❌ account.controller | 
+                account_status_change |
+                updateOne: ${err.message}`);
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             })
         })
 
     if (updated.matchedCount === 0) {
+        console.log(`❌ account.controller | 
+            account_status_change |
+            matchedCount: User ID not exist!`);
+
         return res.send({
             message: "User ID not exist!",
             flag: "FAIL",
@@ -43,6 +52,10 @@ module.exports.account_status_change = async (req, res) => {
         updated.matchedCount !== 0 &&
         updated.modifiedCount === 0
     ) {
+        console.log(`❌ account.controller | 
+            account_status_change |
+            matchedCount: Doc Not Updated!`);
+
         return res.send({ message: "Doc Not Updated!", flag: "FAIL" });
     } else if (
         updated.matchedCount !== 0 &&
@@ -72,7 +85,8 @@ module.exports.fetch_users = async (req, res) => {
         .then((data) => {
             return data
         })
-        .catch(() => {
+        .catch((err) => {
+            console.log(`❌ account.controller | fetch_users: ${err.message}`);
             return []
         })
 
@@ -91,8 +105,10 @@ module.exports.fetch_user_informations = async (req, res) => {
         const result = await Departments.find(filter)
             .then(result => result)
             .catch(err => {
+                console.log(`❌ account.controller | 
+                    fetch_user_information: ${err.message}`);
                 return {
-                    message: err.message,
+                    message: "Something went wrong",
                     flag: "FAIL"
                 }
             })
@@ -150,7 +166,10 @@ module.exports.fetch_users_by_id = async (req, res) => {
         .then((data) => {
             return data
         })
-        .catch(() => {
+        .catch((err) => {
+            console.log(`❌ account.controller | 
+                fetch_users_by_id: ${err.message}`);
+
             return []
         })
 
@@ -188,6 +207,9 @@ module.exports.fetch_users_by_dept = async (req, res) => {
 	const isValid = validateApiKey({ dept_ids })
 
 	if(!isValid){
+        console.log(`❌ account.controller | 
+            fetch_users_by_dept: Invalid API Key`);
+
 		return res.send({
 			message: "Invalid API Key",
 			flag: "FAIL"
@@ -203,8 +225,11 @@ module.exports.fetch_users_by_dept = async (req, res) => {
 	const users = await Users.find(filter)
 							.then(result => result)
 							.catch(err => {
+                                console.log(`❌ account.controller | 
+                                    fetch_users_by_dept: ${err.message}`);
+
 								return res.send({
-									message: err.message,
+									message: "Something went wrong",
 									flag: "FAIL"
 								})
 							})

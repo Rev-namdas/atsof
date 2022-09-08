@@ -91,6 +91,9 @@ module.exports.save_attendance = async (req, res) => {
         month, date, login_time })
 
     if (!isValid) {
+        console.log(`❌ attendence.controller | 
+            save_attendance: Invalid API Key`);
+
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL",
@@ -115,7 +118,11 @@ module.exports.save_attendance = async (req, res) => {
         .then((user) => {
             return user.office_time;
         })
-        .catch(() => {
+        .catch((err) => {
+            console.log(`❌ attendance.controller | 
+                save_attendance |
+                userOfficeTime: ${err.message}`);
+
             return 0;
         });
 
@@ -133,8 +140,12 @@ module.exports.save_attendance = async (req, res) => {
             return data
         })
         .catch((err) => {
+            console.log(`❌ attendance.controller | 
+                save_attendance |
+                user_exist: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             })
         })
@@ -149,6 +160,10 @@ module.exports.save_attendance = async (req, res) => {
                 flag: "SUCCESS",
             });
         } else {
+            console.log(`❌ attendance.controller | 
+                save_attendance |
+                done: Something went wrong`);
+
             return res.send({
                 message: "Something went wrong",
                 flag: "FAIL",
@@ -167,8 +182,12 @@ module.exports.save_attendance = async (req, res) => {
                 return data
             })
             .catch((err) => {
+                console.log(`❌ attendance.controller | 
+                    save_attendance |
+                    date_exist: ${err.message}`);
+
                 return res.send({
-                    message: err.message,
+                    message: "Something went wrong",
                     flag: "FAIL"
                 })
             })
@@ -200,6 +219,10 @@ module.exports.save_attendance = async (req, res) => {
                     flag: "SUCCESS",
                 });
             } else {
+                console.log(`❌ attendance.controller | 
+                    save_attendance |
+                    updated: Something went wrong`);
+
                 return res.send({
                     message: "Something Wrong",
                     flag: "FAIL",
@@ -215,6 +238,9 @@ module.exports.save_logout_time = async (req, res) => {
     const isValid = validateApiKey({ user_id, month, date, logout_time })
 
     if (!isValid) {
+        console.log(`❌ attendance.controller | 
+                save_logout_time: Invalid API Key`);
+
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL",
@@ -231,8 +257,12 @@ module.exports.save_logout_time = async (req, res) => {
             return data
         })
         .catch((err) => {
+            console.log(`❌ attendance.controller | 
+                save_logout_time |
+                date_exist: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             })
         })
@@ -252,12 +282,20 @@ module.exports.save_logout_time = async (req, res) => {
                 flag: "SUCCESS",
             });
         } else {
+            console.log(`❌ attendance.controller | 
+                save_logout_time |
+                updated: Something went wrong`);
+
             return res.send({
                 message: "Something Wrong",
                 flag: "FAIL",
             });
         }
     } else {
+        console.log(`❌ attendance.controller | 
+                save_logout_time |
+                date_exist: Check user id, month, date field`);
+
         return res.send({
             message: "Check user id, month, date field !",
             flag: "FAIL",
@@ -272,7 +310,11 @@ module.exports.fetch_attendance_by_user_id = async (req, res) => {
         .then((data) => {
             return data
         })
-        .catch(() => {
+        .catch((err) => {
+            console.log(`❌ attendance.controller | 
+                fetch_attendance_by_user_id |
+                result: ${err.message}`);
+
             return []
         })
 
@@ -284,7 +326,10 @@ module.exports.fetch_details = async (req, res) => {
         .then((data) => {
             return data
         })
-        .catch(() => {
+        .catch((err) => {
+            console.log(`❌ attendance.controller | 
+                fetch_details: ${err.message}`);
+
             return []
         })
 
@@ -311,7 +356,11 @@ module.exports.fetch_user_lates = async (req, res) => {
         .then((data) => {
             return data
         })
-        .catch(() => {
+        .catch((err) => {
+            console.log(`❌ attendance.controller | 
+                fetch_user_lates |
+                result: ${err.message}`);
+
             return []
         })
 
@@ -338,13 +387,21 @@ module.exports.fetch_attendance_by_dept_access = async (req, res) => {
         .select(field)
         .then(result => result)
         .catch(err => {
+            console.log(`❌ attendance.controller | 
+                fetch_attendance_by_dept_access |
+                users: ${err.message}`);
+
             return {
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             }
         })
 
     if(!users){
+        console.log(`❌ attendance.controller | 
+                fetch_attendance_by_dept_access |
+                !users: Something went wrong`);
+
         return {
             message: "Something went wrong",
             flag: "FAIL"
@@ -379,13 +436,21 @@ module.exports.fetch_attendance_by_dept_access = async (req, res) => {
             return res
         })
         .catch(err => {
+            console.log(`❌ attendance.controller | 
+                fetch_attendance_by_dept_access |
+                attendances: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             })
         })
 
     if(!attendances){
+        console.log(`❌ attendance.controller | 
+            fetch_attendance_by_dept_access |
+            !attendances: Something went wrong`);
+
         return res.send({
             message: "Something went wrong",
             flag: "FAIL"
@@ -395,8 +460,12 @@ module.exports.fetch_attendance_by_dept_access = async (req, res) => {
     const departments = await Departments.find()
         .then(result => result)
         .catch(err => {
+            console.log(`❌ attendance.controller | 
+                fetch_attendance_by_dept_access |
+                departments: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             })
         })
@@ -404,8 +473,12 @@ module.exports.fetch_attendance_by_dept_access = async (req, res) => {
     const govtLeaves = await Holidays.find()
         .then(result => result)
         .catch(err => {
+            console.log(`❌ attendance.controller | 
+                fetch_attendance_by_dept_access |
+                govtLeaves: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             })
         })
@@ -490,13 +563,21 @@ module.exports.search_attendance_by_dept_access = async (req, res) => {
         .select(field)
         .then(result => result)
         .catch(err => {
+            console.log(`❌ attendance.controller | 
+                search_attendance_by_dept_access |
+                users: ${err.message}`);
+
             return {
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             }
         })
 
     if(!users){
+        console.log(`❌ attendance.controller | 
+                search_attendance_by_dept_access |
+                !users: Something went wrong`);
+
         return {
             message: "Something went wrong",
             flag: "FAIL"
@@ -531,13 +612,21 @@ module.exports.search_attendance_by_dept_access = async (req, res) => {
             return res
         })
         .catch(err => {
+            console.log(`❌ attendance.controller | 
+                search_attendance_by_dept_access |
+                attendances: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             })
         })
 
     if(!attendances){
+        console.log(`❌ attendance.controller | 
+                search_attendance_by_dept_access |
+                !attendances: Something went wrong`);
+
         return res.send({
             message: "Something went wrong",
             flag: "FAIL"
@@ -547,8 +636,12 @@ module.exports.search_attendance_by_dept_access = async (req, res) => {
     const departments = await Departments.find()
         .then(result => result)
         .catch(err => {
+            console.log(`❌ attendance.controller | 
+                search_attendance_by_dept_access |
+                departments: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             })
         })
@@ -639,8 +732,12 @@ module.exports.monthly_attendance = async (req, res) => {
     const userAttendance = await UserDetails.aggregate([unwind, match])
         .then(result => result)
         .catch(err => {
+            console.log(`❌ attendance.controller | 
+                monthly_attendance |
+                userAttendances: ${err.message}`);
+
             return {
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             }
         })
@@ -704,6 +801,9 @@ module.exports.search_attendance_by_date = async (req, res) => {
     const isValid = validateApiKey({ start_date, end_date })
 
     if(!isValid){
+        console.log(`❌ attendance.controller | 
+                search_attendance_by_date: Invalid API Key`);
+
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"
@@ -735,8 +835,12 @@ module.exports.search_attendance_by_date = async (req, res) => {
     const userAttendance = await UserDetails.aggregate([unwind, match])
         .then(result => result)
         .catch(err => {
+            console.log(`❌ attendance.controller | 
+                search_attendance_by_date |
+                userAttendances: ${err.message}`);
+
             return {
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL"
             }
         })

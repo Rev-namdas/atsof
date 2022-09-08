@@ -16,6 +16,9 @@ module.exports.user_registration = async (req, res) => {
         leaves, department_id, dept_access })
 
     if(!isValid){
+        console.log(`❌ auth.controller | 
+                user_registration: Invalid API Key`);
+
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"
@@ -30,13 +33,21 @@ module.exports.user_registration = async (req, res) => {
             return user
         })
         .catch((err) => {
+            console.log(`❌ auth.controller | 
+                user_registration |
+                user_exist: ${err.message}`);
+
             return res.status(202).send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL",
             });
         })
 
     if(user_exist){
+        console.log(`❌ auth.controller | 
+            user_registration |
+            user_exist: Username already exist`);
+
         return res.status(202).send({
             message: "Username already exist!",
             flag: "FAIL",
@@ -98,21 +109,33 @@ module.exports.user_registration = async (req, res) => {
             return doc
         })
         .catch((err) => {
+            console.log(`❌ auth.controller | 
+                user_registration |
+                updated: ${err.message}`);
+
             return res.status(202).send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL",
             });
         })
 
     if (!updated) {
+        console.log(`❌ auth.controller | 
+            user_registration |
+            !updated: DB not responding`);
+
         return res.send({
-            message: "DB not responding",
+            message: "Something went wrong",
             flag: "FAIL",
         });
     }
 
     if (updated) {
         if (updated.matchedCount === 0) {
+            console.log(`❌ auth.controller | 
+                user_registration |
+                updated: User ID not found in leave instance`);
+
             return res.send({
                 message: "User ID Not Found in Leave Instance !",
                 flag: "FAIL",
@@ -123,6 +146,10 @@ module.exports.user_registration = async (req, res) => {
             updated.matchedCount > 0 &&
             updated.modifiedCount === 0
         ) {
+            console.log(`❌ auth.controller | 
+                user_registration |
+                modifiedCount: Leave ID Exists`);
+
             return res.send({
                 message: "Leave ID Exists !",
                 flag: "FAIL",
@@ -146,6 +173,10 @@ module.exports.user_registration = async (req, res) => {
         const saved = userAttendanceInstance.save()
 
         if(!saved){
+            console.log(`❌ auth.controller | 
+                user_registration |
+                !saved: Something went wrong`);
+
             return res.send({
                 message: "Something went wrong",
                 flag: "FAIL"
@@ -165,6 +196,9 @@ module.exports.user_login = async (req, res) => {
     const isValid = validateApiKey({ user_name, password })
 
     if(!isValid){
+        console.log(`❌ auth.controller | 
+                user_login: Invalid API Key`);
+
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"
@@ -178,13 +212,21 @@ module.exports.user_login = async (req, res) => {
             return data
         })
         .catch((err) => {
+            console.log(`❌ auth.controller | 
+                user_login |
+                user_exist: ${err.message}`);
+
             return res.status(202).send({
-                message: err.message, 
+                message: "Something went wrong", 
                 flag: "FAIL"
             });
         })
 
     if (!user_exist){
+        console.log(`❌ auth.controller | 
+            user_login |
+            !user_exist: You are not registered`);
+
         return res.status(202).send({
             message: "You are not registered!", 
             flag: "FAIL"
@@ -193,17 +235,22 @@ module.exports.user_login = async (req, res) => {
 
     if (user_exist) {
         if (user_exist.password !== md5(password)) {
+            console.log(`❌ auth.controller | 
+                user_login |
+                user_exist: Incorrect password`);
+
             return res.status(202).send({
                 message: "Incorrect password!",
-                u: user_exist,
-                up: user_exist.password,
-                p: md5(password),
                 flag: "FAIL"
             });
         }
 
         if (user_exist.password === md5(password)) {
             if (!user_exist.active) {
+                console.log(`❌ auth.controller | 
+                    user_login |
+                    user_exist: Account deactivated`);
+
                 return res.send({
                     message: "Account Deactivated!",
                     flag: "FAIL",
@@ -213,6 +260,10 @@ module.exports.user_login = async (req, res) => {
             const today = new Date();
 
             if(user_exist.leaves[today.getDay()].includes(date_to_unix(today))){
+                console.log(`❌ auth.controller | 
+                    user_login |
+                    user_exist: Not allowed on leave day`);
+                
                 return res.send({
                     message: "Not allowed on leave day",
                     flag: "FAIL",
@@ -220,6 +271,10 @@ module.exports.user_login = async (req, res) => {
             }
 
             if (user_exist.dayoff.includes(today.getDay())) {
+                console.log(`❌ auth.controller | 
+                    user_login |
+                    user_exist: Not allowed today`);
+
                 return res.send({
                     message: "Not allowed today",
                     flag: "FAIL",

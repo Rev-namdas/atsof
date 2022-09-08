@@ -23,6 +23,9 @@ module.exports.leave_apply = async (req, res) => {
     })
 
     if (!isValid) {
+        console.log(`❌ leave.controller | 
+            leave_apply: Invalid API Key`);
+
         return res.send({
             message: "Invalid API Key !",
             flag: "FAIL"
@@ -62,18 +65,30 @@ module.exports.leave_apply = async (req, res) => {
             return data;
         })
         .catch((err) => {
+            console.log(`❌ leave.controller | 
+                leave_apply |
+                updated: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL",
             });
         });
 
     if (!updated) {
+        console.log(`❌ leave.controller | 
+                leave_apply |
+                !updated: Something went wrong`);
+
         return res.send({ message: "Internal Error", flag: "FAIL" });
     }
 
     if (updated) {
         if (updated.matchedCount === 0 && updated.modifiedCount === 0) {
+            console.log(`❌ leave.controller | 
+                leave_apply |
+                updated: You have already applied for this date`);
+            
             return res.send({
                 message: "You have already applied for this date",
                 flag: "FAIL",
@@ -81,6 +96,10 @@ module.exports.leave_apply = async (req, res) => {
         }
 
         if (updated.matchedCount > 0 && updated.modifiedCount === 0) {
+            console.log(`❌ leave.controller | 
+                leave_apply |
+                modifiedCount 0: Something went wrong`);
+            
             return res.send({
                 message: "Something went wrong",
                 flag: "FAIL",
@@ -121,8 +140,12 @@ module.exports.pending_leaves = async (req, res) => {
             return data;
         })
         .catch((err) => {
+            console.log(`❌ leave.controller | 
+                pending_leaves |
+                docs_exist: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL",
             });
         });
@@ -163,6 +186,9 @@ module.exports.leave_approve = async (req, res) => {
     const isValid = validateApiKey({ user_id, from_date, to_date, leave_count, taken_dates })
 
     if(!isValid){
+        console.log(`❌ leave.controller | 
+            leave_approve: Invalid API Key`);
+
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"
@@ -181,13 +207,21 @@ module.exports.leave_approve = async (req, res) => {
             return data;
         })
         .catch((err) => {
+            console.log(`❌ leave.controller | 
+                leave_approve |
+                leave_exist: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL",
             });
         });
 
     if (!leave_exist) {
+        console.log(`❌ leave.controller | 
+            leave_apply |
+            !leave_exist: Already approved`);
+
         return res.send({
             message: "Already Approved By You",
             flag: "FAIL",
@@ -217,13 +251,21 @@ module.exports.leave_approve = async (req, res) => {
             return data;
         })
         .catch((err) => {
+            console.log(`❌ leave.controller | 
+                leave_approve |
+                user_exist: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL",
             });
         });
 
     if (!user_exist) {
+        console.log(`❌ leave.controller | 
+            leave_approve |
+            !user_exist: User ID not found in DB`);
+
         return res.send({
             message: "User ID Not Found In DB",
             flag: "FAIL",
@@ -248,6 +290,9 @@ module.exports.leave_decline = async (req, res) => {
     const isValid = validateApiKey({ user_id, from_date, to_date })
 
     if(!isValid){
+        console.log(`❌ leave.controller | 
+            leave_decline: Invalid API Key`);
+
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"
@@ -271,13 +316,21 @@ module.exports.leave_decline = async (req, res) => {
             return update;
         })
         .catch((err) => {
+            console.log(`❌ leave.controller | 
+                leave_decline |
+                updated: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL",
             });
         });
 
     if (updated.matchedCount === 0) {
+        console.log(`❌ leave.controller | 
+            leave_decline |
+            matchedCount 0: Leave not found`);
+
         return res.send({
             message: "Leave Not Found",
             flag: "FAIL",
@@ -285,6 +338,10 @@ module.exports.leave_decline = async (req, res) => {
     }
 
     if (updated.matchedCount === 1 && updated.modifiedCount === 0) {
+        console.log(`❌ leave.controller | 
+            leave_decline |
+            matchedCount 1, modifiedCount 0: Something went wrong`);
+
         return res.send({
             message: "Something went wrong",
             flag: "FAIL",
@@ -305,6 +362,9 @@ module.exports.leave_recommend = async (req, res) => {
     const isValid = validateApiKey({ decision, employee_id, from_date, to_date })
 
     if(!isValid){
+        console.log(`❌ leave.controller | 
+            leave_recommend: Invalid API Key`);
+
         return res.send({
             message: "Invalid API Key",
             flag: "FAIL"
@@ -340,13 +400,21 @@ module.exports.leave_recommend = async (req, res) => {
             return update;
         })
         .catch((err) => {
+            console.log(`❌ leave.controller | 
+                leave_recommend |
+                updated: ${err.message}`);
+
             return res.send({
-                message: err.message,
+                message: "Something went wrong",
                 flag: "FAIL",
             });
         });
 
     if (!updated) {
+        console.log(`❌ leave.controller | 
+            leave_recommend |
+            !updated: Something went wrong`);
+
         return res.send({
             message: "Something went wrong",
             flag: "FAIL",
@@ -355,21 +423,37 @@ module.exports.leave_recommend = async (req, res) => {
 
     if (updated) {
         if (updated.matchedCount === 0) {
+            console.log(`❌ leave.controller | 
+                leave_recommend |
+                updated: Already submitted`);
+
             return res.send({
                 message: "Already Submitted",
                 flag: "FAIL",
             });
         } else if (updated.matchedCount !== 0 && updated.modifiedCount === 0) {
+            console.log(`❌ leave.controller | 
+                leave_recommend |
+                updated: Leave not found`);
+            
             return res.send({
                 message: "Leave Not Found",
                 flag: "FAIL",
             });
         } else if (updated.matchedCount === 1 && updated.modifiedCount === 1) {
+            console.log(`❌ leave.controller | 
+                leave_recommend |
+                updated: Decision submitted`);
+            
             return res.send({
                 message: "Decision Submitted",
                 flag: "SUCCESS",
             });
         } else {
+            console.log(`❌ leave.controller | 
+                leave_recommend |
+                updated: Something went wrong`);
+
             return res.send({
                 message: "Something went wrong",
                 flag: "FAIL",
@@ -385,7 +469,10 @@ module.exports.user_leave_status = async (req, res) => {
         .then((data) => {
             return data;
         })
-        .catch(() => {
+        .catch((err) => {
+            console.log(`❌ leave.controller | 
+                user_leave_status: ${err.message}`);
+
             return {};
         });
 

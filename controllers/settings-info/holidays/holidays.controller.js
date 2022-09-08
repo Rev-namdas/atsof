@@ -3,13 +3,16 @@ const Holidays = require("../../../models/settings-info/Holidays")
 const Users = require("../../../models/Users")
 const moment = require("moment")
 
-module.exports.createHoliday = async (req, res) => {
+module.exports.create_holiday = async (req, res) => {
 	const { leave_name, leave_date } = req.body	
 	let leave_id
 
 	const isValid = validateApiKey({ leave_name, leave_date })
 
 	if(!isValid){
+		console.log(`❌ holiday.controller | 
+			create_holiday: API Key Invalid`);
+
 		return res.send({
 			message: "API Key Invalid",
 			flag: "FAIL"
@@ -36,6 +39,9 @@ module.exports.createHoliday = async (req, res) => {
 			})
 			.catch(err => {
 				if(err.code === 11000){
+					console.log(`❌ holiday.controller | 
+						create_holiday: This date is already assigned`);
+
 					return {
 						message: "This date is already assigned",
 						flag: "WARNING"
@@ -51,7 +57,7 @@ module.exports.createHoliday = async (req, res) => {
 	res.send(output)
 }
 
-module.exports.getHolidays = async (req, res) => {
+module.exports.get_holidays = async (req, res) => {
 	const leaves = await Holidays.find()
 							.then(res => {
 								return {
@@ -61,8 +67,11 @@ module.exports.getHolidays = async (req, res) => {
 								}
 							})
 							.catch(err => {
+								console.log(`❌ holiday.controller | 
+									get_holidays: ${err.message}`);
+
 								return {
-									message: err.message,
+									message: "Something went wrong",
 									flag: "FAIL",
 									leaves: []
 								}
@@ -71,12 +80,15 @@ module.exports.getHolidays = async (req, res) => {
 	res.send(leaves)
 }
 
-module.exports.assignHolidays = async (req, res) => {
+module.exports.assign_holidays = async (req, res) => {
 	const { holidays, dept_id, user_ids } = req.body
 
 	const isValid = validateApiKey({ holidays, dept_id, user_ids })
 
 	if(!isValid){
+		console.log(`❌ holiday.controller | 
+			assing_holidays: Invalid API Key`);
+
 		return res.send({
 			message: "Invalid API Key",
 			flag: "FAIL"
@@ -95,8 +107,12 @@ module.exports.assignHolidays = async (req, res) => {
 	const users = await Users.find(filter)
 							.then(result => result)
 							.catch(err => {
+								console.log(`❌ holiday.controller | 
+									assign_holidays |
+									users: ${err.message}`);
+								
 								return res.send({
-									message: err.message,
+									message: "Something went wrong",
 									flag: "FAIL"
 								})
 							})
