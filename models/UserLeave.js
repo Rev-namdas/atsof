@@ -13,6 +13,13 @@ const userLeaveSchema = new mongoose.Schema({
 			leave_taken: { type: Number, default: 0 }
 		}
 	],
+	holiday: [
+		{
+			leave_id: Number,
+			leave_name: String,
+			leave_date: Number
+		}
+	],
 	leave_dates: [
 		{
 			from_date: Number,
@@ -27,6 +34,11 @@ const userLeaveSchema = new mongoose.Schema({
 		}
 	],
 	applied_dates: [Number],
+	exchanged_dates: [{
+		date: Number,
+		approved: { type: Number, default: 0 }
+	}],
+	exchange_balance: { type: Number, default: 0 },
 	pending_status: { type: Number, default: 0 }
 }, {
 	collection: 'leaves'

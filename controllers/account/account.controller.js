@@ -1,7 +1,8 @@
 const { validateApiKey } = require("../../helpers/validateApiKey");
 const Departments = require("../../models/settings-info/Departments");
 const Users = require("../../models/Users");
-const moment = require("moment")
+const moment = require("moment");
+const UserLeave = require("../../models/UserLeave");
 
 module.exports.account_status_change = async (req, res) => {
     const { user_id, account_status } = req.body;
@@ -221,8 +222,16 @@ module.exports.fetch_users_by_dept = async (req, res) => {
 			"$in": dept_ids
 		}
 	}
+
+    const fields = {
+        _id: 0,
+        user_id: 1,
+        username: 1,
+        dayoff: 1
+    }
 	
 	const users = await Users.find(filter)
+                            .select(fields)
 							.then(result => result)
 							.catch(err => {
                                 console.log(`❌ account.controller | 
@@ -235,4 +244,26 @@ module.exports.fetch_users_by_dept = async (req, res) => {
 							})
 
     res.send(users)
+}
+
+module.exports.add_new_field = async (req, res) => {
+    const result = await UserLeave.updateMany({}, {
+                                "$set": { holiday: [] }
+                            })
+                            .then(() => {
+                                return {
+                                    message: "Successful",
+                                    flag: "SUCCESS"
+                                }
+                            })
+                            .catch(err => {
+                                console.log(`❌ account.controller | add_new_field: ${err.message}`);
+
+                                return {
+                                    message: "Something went wrong",
+                                    flag: "ERROR"
+                                }
+                            })
+    
+    res.send(result)
 }
