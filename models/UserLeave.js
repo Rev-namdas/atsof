@@ -17,7 +17,8 @@ const userLeaveSchema = new mongoose.Schema({
 		{
 			leave_id: Number,
 			leave_name: String,
-			leave_date: Number
+			leave_date: Number,
+			taken: { type: Number, default: 0 }
 		}
 	],
 	leave_dates: [
@@ -36,6 +37,7 @@ const userLeaveSchema = new mongoose.Schema({
 	applied_dates: [Number],
 	exchanged_dates: [{
 		date: Number,
+		details: String,
 		approved: { type: Number, default: 0 }
 	}],
 	exchange_balance: { type: Number, default: 0 },

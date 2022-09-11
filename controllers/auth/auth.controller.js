@@ -6,6 +6,7 @@ const UserLeave = require("../../models/UserLeave");
 const { date_to_unix } = require("../../helpers/date_to_unix");
 const { validateApiKey } = require("../../helpers/validateApiKey");
 const UserDetails = require("../../models/UserDetails");
+const moment = require("moment")
 
 module.exports.user_registration = async (req, res) => {
     const { user_name, password, role, dayoff, office_time,
@@ -270,7 +271,10 @@ module.exports.user_login = async (req, res) => {
                 });
             }
 
-            if (user_exist.dayoff.includes(today.getDay())) {
+            if (
+                (user_exist.dayoff.includes(today.getDay())) &&
+                (!user_exist.allowed_dates.includes(moment().startOf('date').unix()))
+            ) {
                 console.log(`❌ auth.controller | 
                     user_login |
                     user_exist: Not allowed today`);

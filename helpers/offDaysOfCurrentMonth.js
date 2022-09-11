@@ -17,8 +17,9 @@ module.exports.offDaysOfCurrentMonth = (dayoff) => {
 		
 		if(currentDate.day() === dayoff){
 			dates.push({
-				unix: currentDate.unix(),
-				date: currentDate.format("DD-MM-YYYY ddd")
+				date: currentDate.unix(),
+				label: currentDate.format("DD-MM-YYYY ddd"),
+				details: "Day-Off"
 			})
 		}
 	}

@@ -192,7 +192,8 @@ module.exports.fetch_holiday_details = async (req, res) => {
 	
 	let list = []
 	const filter = {
-		user_id: user_id
+		user_id: user_id,
+		"holiday.taken": 0
 	}
 	
 	const fields = {
@@ -206,7 +207,15 @@ module.exports.fetch_holiday_details = async (req, res) => {
 	} else if(selection === 'holiday'){
 		list = await UserLeave.findOne(filter)
 								.select(fields)
-								.then(res => res.holiday)
+								.then(res => {
+									const list = res.holiday.map(each => ({
+										date: each.leave_date,
+										label: `${moment.unix(each.leave_date)
+												.format("DD-MMM-YYYY ddd")} - ${each.leave_name}`,
+										details: each.leave_name
+									}))
+									return list
+								})
 								.catch(err => {
 									console.log(`❌ holiday.controller | fetch_holiday_details | holidays: ${err.message}`);
 
@@ -230,7 +239,7 @@ module.exports.fetch_holiday_details = async (req, res) => {
 }
 
 module.exports.request_holiday_exchange = async (req, res) => {
-	const { user_id, selection, date } = req.body
+	const { user_id, selection, date, details } = req.body
 
 	const isValid = validateApiKey({ user_id, selection, date })
 
@@ -272,10 +281,11 @@ module.exports.request_holiday_exchange = async (req, res) => {
 		foundUser.applied_dates.push(date)
 		foundUser.exchanged_dates.push({
 			date: date,
+			details: details,
 			approved: 0 // status pending on apply
 		})
 	
-		const result = 	foundUser.save()
+		const result = await foundUser.save()
 							.then(res => {
 								if(res === null){
 									console.log(`❌ holiday.controller | request_holiday_exchange | foundUser`);
@@ -342,4 +352,106 @@ module.exports.pending_exchange_list = async (req, res) => {
 								})
 
 	res.send(list)
+}
+
+module.exports.approve_exchange_request = async (req, res) => {
+	/**
+	 * select user by user id & date to approve in UserLeave Model
+	 * change approved 0 to 1
+	 * add date to Users Model in allowed dates
+	 */
+	const { user_id, date, holiday_type } = req.body
+	let saved
+
+	const isValid = validateApiKey({ user_id, date, holiday_type })
+
+	if(!isValid){
+		console.log(`❌ holiday.controller | approve_exchange_request: Invalid API Key`);
+
+		return res.send({
+			message: "Invalid API Key",
+			flag: "FAIL"
+		})
+	}
+
+	const filter = {
+		"user_id": user_id,
+		"exchanged_dates.date": date,
+		"exchanged_dates.approved": 0
+	}
+
+	const updateDoc = {
+		"$inc": {
+			"exchange_balance": 1
+		},
+		"$set": {
+			"exchanged_dates.$.approved": 1
+		}
+	}
+
+	const updated = await UserLeave.updateOne(filter, updateDoc)
+							.then(updated => {
+								if(updated.matchedCount !== 0 && updated.modifiedCount !== 0){
+									return true
+								} else {
+									return false
+								}
+							})
+							.catch(err => {
+								console.log(`❌ holiday.controller | approve_exchange_request | UserLeave Update: ${err.message}`);
+								
+								return false
+							})
+
+	if(updated){
+		const user = await Users.findOne({ user_id })	
+									.then(res => res)
+									.catch(err => {
+										console.log(`❌ holiday.controller | approve_exchange_request | user: ${err.message}`);
+
+										return res.send({
+											message: "Something went wrong",
+											flag: "FAIL"
+										})
+									})
+		
+		// Day Off Exchange Request
+		if(holiday_type === 'Day-Off'){
+			user.allowed_dates.push(date)
+		} 
+		// Holiday Exchange Request
+		else if(holiday_type !== "") {
+			// UNFINISHED
+			user.leaves[moment.unix(date).day()] = user.leaves[moment.unix(date).day()].filter(each => each !== date)
+		}
+
+		saved = await user.save()
+								.then(res => {
+									if(res === null) return false
+
+									return true
+								})
+								.catch(err => {
+									console.log(`❌ holiday.controller | approve_exchange_request | saved: ${err.message}`);
+									
+									return res.send({
+										message: "Something went wrong",
+										flag: "FAIL"
+									})
+								})
+	}
+
+	if(saved){
+		res.send({
+			message: "Holiday Request Approved",
+			flag: "SUCCESS"
+		})
+	} else {
+		console.log(`❌ holiday.controller | approve_exchange_request | saved: Not Saved !`);
+
+		res.send({
+			message: "Something went wrong",
+			flag: "FAIL"
+		})
+	}
 }
