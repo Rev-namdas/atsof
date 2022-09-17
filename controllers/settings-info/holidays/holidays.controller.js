@@ -239,9 +239,9 @@ module.exports.fetch_holiday_details = async (req, res) => {
 }
 
 module.exports.request_holiday_exchange = async (req, res) => {
-	const { user_id, selection, date, details } = req.body
+	const { user_id, date, details } = req.body
 
-	const isValid = validateApiKey({ user_id, selection, date })
+	const isValid = validateApiKey({ user_id, date, details })
 
 	if(!isValid){
 		console.log(`❌ holiday.controller | request_holiday_exchange: Invalid API Key`);
@@ -421,7 +421,6 @@ module.exports.approve_exchange_request = async (req, res) => {
 		} 
 		// Holiday Exchange Request
 		else if(holiday_type !== "") {
-			// UNFINISHED
 			user.leaves[moment.unix(date).day()] = user.leaves[moment.unix(date).day()].filter(each => each !== date)
 		}
 

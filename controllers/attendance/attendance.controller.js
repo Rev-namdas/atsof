@@ -6,6 +6,7 @@ const { datesBetweenStartEndDate } = require("../../helpers/datesBetweenStartEnd
 const { datesOfAMonthByCurrentDate } = require("../../helpers/datesOfAMonthByCurrentDate");
 const Departments = require("../../models/settings-info/Departments");
 const Holidays = require("../../models/settings-info/Holidays");
+const UserLeave = require("../../models/UserLeave");
 
 /**
  * Find Month's Name By Date
@@ -742,16 +743,24 @@ module.exports.monthly_attendance = async (req, res) => {
             }
         })
 
+    const userLeave = await UserLeave.findOne({ user_id: user.user_id })
+                                        .select({ user_id: 1, holiday: 1 })
+
     const presentDates = userAttendance.map(each => each.attendance.date)
     
     const attendances = {}
     const logouts = {}
     const lates = {}
+    const holiday = {}
 
     userAttendance.map(each => {
         attendances[each.attendance.date] = each.attendance.login_time
         logouts[each.attendance.date] = each.attendance.logout_time
         lates[each.attendance.date] = each.attendance.late
+    })
+
+    userLeave.holiday.map(each => {
+        holiday[each.leave_date] = each.leave_name
     })
 
     const alldates = dates.map(each => {
@@ -775,8 +784,8 @@ module.exports.monthly_attendance = async (req, res) => {
             return {
                 month: getMonth(each.date),
                 date: each.date,
-                login_time: 'Leave',
-                logout_time: "Leave",
+                login_time: holiday[each.unix] || 'Leave',
+                logout_time: !!holiday[each.unix] ? "Holiday" : "Leave",
                 late: 0
             }
         } else {
